@@ -1,0 +1,61 @@
+# =============================================================================
+# os-template.yml — Instance 設定の唯一の入口
+# =============================================================================
+#
+# このファイルは 02_OS_Template_Spec.md Section 4.1 に基づく。
+# CI と scripts/run はこのファイルの commands を読んで実行する。
+#
+# 運用ルール（Section 4.1.2）:
+#   - commands.lint と commands.test は必ず埋めること（空は禁止）
+#   - typecheck がない言語は空でOK（.ai-context.md に理由を記載）
+#   - runtime.mode=docker を推奨（言語差分吸収が最も安定）
+# =============================================================================
+
+schema_version: "1"
+
+# ---------------------------------------------------------------------------
+# project: プロジェクト識別情報
+# ---------------------------------------------------------------------------
+project:
+  name: "YOUR_PROJECT_NAME"           # TODO: プロジェクト名に置き換える
+  owner: "YOUR_TEAM_OR_OWNER"         # TODO: チーム名/オーナーに置き換える
+  description: ""                     # TODO: プロジェクトの説明を記入する
+
+# ---------------------------------------------------------------------------
+# runtime: 実行環境の設定
+# ---------------------------------------------------------------------------
+runtime:
+  mode: "docker"                      # "docker" | "host"
+  docker_image: ""                    # TODO: mode=docker の場合、イメージを指定する (例: "your-image:tag")
+  host_setup_steps: []                # mode=host の場合推奨 (例: ["python -m venv .venv", "pip install -r requirements.txt"])
+
+# ---------------------------------------------------------------------------
+# commands: scripts/run が実行するコマンド定義
+# ---------------------------------------------------------------------------
+# CI とローカル実行はこのセクションのコマンドを叩くことで統一される。
+# lint と test は必須。空のままだと scripts/run doctor で警告、CI では失敗扱いとなる。
+# ---------------------------------------------------------------------------
+commands:
+  format: ""                          # optional: フォーマッタ (例: "black ." / "prettier --write .")
+  lint: ""                            # TODO: 必須 — lint コマンドを設定する (例: "flake8" / "eslint .")
+  typecheck: ""                       # optional: 型チェック (例: "mypy ." / "tsc --noEmit")。未使用なら空でOK
+  test: ""                            # TODO: 必須 — テストコマンドを設定する (例: "pytest" / "npm test")
+  build: ""                           # optional: ビルド (例: "docker build ." / "npm run build")
+  ci: ""                              # optional: 明示したい場合。空なら run が lint → typecheck → test を順に実行
+
+# ---------------------------------------------------------------------------
+# features: 機能の ON/OFF
+# ---------------------------------------------------------------------------
+features:
+  secret_scan: true                   # シークレット検知
+  dependency_scan: true               # 依存パッケージ脆弱性スキャン
+  guardrail: true                     # AI 監査レビュー（PRコメント）
+  lcg: false                          # Learning Content Generator（段階導入のためデフォルト OFF）
+
+# ---------------------------------------------------------------------------
+# policy: プロジェクトポリシー
+# ---------------------------------------------------------------------------
+policy:
+  allow_skip_typecheck: true          # true の場合、typecheck 空でもOK（.ai-context.md に理由を記載）
+  max_diff_warning: 1200              # PR の行数目安（超過で警告）
+  max_file_warning: 30                # PR のファイル数目安（超過で警告）
