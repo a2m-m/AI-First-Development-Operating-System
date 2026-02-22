@@ -111,9 +111,56 @@ case "$COMMAND" in
     doctor)
         run_doctor
         ;;
-    format|lint|typecheck|test|build|ci|print-config)
-        echo "Command '${COMMAND}' is not yet implemented (Commit 1)."
-        exit 1
+    format|lint|typecheck|test|build)
+        cmd_str=$(get_yaml_value "commands.${COMMAND}")
+        if [ -n "${cmd_str}" ]; then
+            if [ "${cmd_str}" = "echo 'skip'" ]; then
+                echo "Skipping ${COMMAND} as configured in os-template.yml"
+                exit 0
+            fi
+            echo "Running ${COMMAND}: ${cmd_str}"
+            eval "${cmd_str}"
+        else
+            echo "Error: commands.${COMMAND} is not configured in os-template.yml"
+            echo "Running doctor to show missing configurations:"
+            run_doctor
+            exit 1
+        fi
+        ;;
+    ci)
+        echo "--- Running generic CI pipeline ---"
+        ci_cmd=$(get_yaml_value "commands.ci")
+        if [ -n "${ci_cmd}" ]; then
+            echo "Running custom CI command: ${ci_cmd}"
+            eval "${ci_cmd}"
+        else
+            echo "[1/3] Running lint"
+            "$0" lint
+            
+            typecheck_cmd=$(get_yaml_value "commands.typecheck")
+            if [ -n "${typecheck_cmd}" ]; then
+                echo "[2/3] Running typecheck"
+                "$0" typecheck
+            else
+                echo "[2/3] Skipping typecheck (not configured)"
+            fi
+            
+            echo "[3/3] Running test"
+            "$0" test
+            
+            echo "CI pipeline completed successfully."
+        fi
+        ;;
+    print-config)
+        echo "Parsed Configuration from os-template.yml:"
+        echo "  runtime.mode         : $(get_yaml_value 'runtime.mode')"
+        echo "  runtime.docker_image : $(get_yaml_value 'runtime.docker_image')"
+        echo "  commands.format      : $(get_yaml_value 'commands.format')"
+        echo "  commands.lint        : $(get_yaml_value 'commands.lint')"
+        echo "  commands.typecheck   : $(get_yaml_value 'commands.typecheck')"
+        echo "  commands.test        : $(get_yaml_value 'commands.test')"
+        echo "  commands.build       : $(get_yaml_value 'commands.build')"
+        echo "  commands.ci          : $(get_yaml_value 'commands.ci')"
         ;;
     *)
         show_help
