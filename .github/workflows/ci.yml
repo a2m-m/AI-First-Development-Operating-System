@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check CI Enabled
+        id: check-ci
+        run: |
+          if [ -f "os-template.yml" ]; then
+            ENABLED=$(python3 -c '
+          import sys, re
+          for line in open("os-template.yml"):
+              m = re.match(r"^\s+ci:\s*(true|false)", line)
+              if m:
+                  print(m.group(1).lower())
+                  sys.exit(0)
+          print("true")')
+          else
+            ENABLED="true"
+          fi
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+
+      - name: Run Doctor
+        if: steps.check-ci.outputs.enabled == 'true'
+        run: ./scripts/run doctor
+
+      - name: Run CI
+        if: steps.check-ci.outputs.enabled == 'true'
+        run: ./scripts/run ci

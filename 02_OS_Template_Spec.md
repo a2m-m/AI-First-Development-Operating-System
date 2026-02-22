@@ -106,6 +106,7 @@ commands:
   ci: ""          \# optional: 明示したい場合。空なら run が lint/typecheck/test を順に実行
 
 features:  
+  ci: true  
   secret\_scan: true  
   dependency\_scan: true  
   guardrail: true  
