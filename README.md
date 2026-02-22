@@ -25,9 +25,10 @@ OS は AI（Claude Code / Antigravity）× GitHub を前提に、速度と安全
 
 ```
 本リポ（OS Template）
-  ├─ 01/02/03 Docs      … OS の思想・仕様・手順
+  ├─ 01/02/03 Docs        … OS の思想・仕様・手順
   ├─ scripts/            … 実行口（run / init）
   ├─ .github/            … CI / Issue・PR テンプレート
+  ├─ .claude/skills/     … Claude Code Skills（反復作業のモジュール化）
   ├─ docs/               … プロジェクト固有ドキュメントの雛形
   ├─ os-template.yml     … 差分設定の唯一の入口
   └─ .ai-*               … AI エージェント向けコンテキスト

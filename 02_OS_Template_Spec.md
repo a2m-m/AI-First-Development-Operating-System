@@ -229,6 +229,12 @@ MUST \= 必須 / SHOULD \= 推奨（ただし可能なら入れる）
 * SHOULD `scripts/hooks/pre-push`（導入しやすい場合）  
 * SHOULD `scripts/lib/`（共通関数）
 
+### **5.5 `.claude/`**
+
+* MUST `.claude/CLAUDE.md`（Claude Code 固有ルール）  
+* SHOULD `.claude/skills/`（反復作業のモジュール化）  
+* SHOULD `.claude/skills/<name>/SKILL.md`（各スキルの定義）
+
 ---
 
 ## **6\. 各ファイル仕様（テンプレ本文レベルで固定）**
@@ -335,6 +341,18 @@ Quickstart例（テンプレに入れる）：
 
 * 導入は段階的（最初はコメントのみ、BLOCKER/HIGHのみブロック）  
 * 同じ指摘が続いたら「人を責めずにテンプレを改善」
+
+---
+
+### **7.5 Skills（AI行動のモジュール化）**
+
+Iteration Cycle（①〜⑥）で反復する作業を **Claude Code Skills** としてモジュール化する。
+
+* スキルは `.claude/skills/<name>/SKILL.md` に配置する  
+* Template に含むスキル（不変）と、Instance で追加するスキル（可変）を区別する  
+* Template のスキルを Instance で改造しない（改善は Template へ還元）  
+* **スキル化の判断基準**：同じ作業を3回やったらスキル化を検討する  
+* 新しいスキルの作成は `/skill-create` スキルで行う
 
 ---
 
