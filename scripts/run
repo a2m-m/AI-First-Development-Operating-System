@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+
+set -e
+
+# =============================================================================
+# scripts/run
+# =============================================================================
+# Description: The single entrypoint for executing commands defined in os-template.yml.
+# It provides a unified command set for both local development and CI.
+# =============================================================================
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${ROOT_DIR}/os-template.yml"
+
+# -----------------------------------------------------------------------------
+# Helper: get_yaml_value
+# Extract values from os-template.yml without relying on external yq.
+# -----------------------------------------------------------------------------
+get_yaml_value() {
+    local key_path="$1"
+    python3 -c "
+import sys, re, json
+def get_val(file, path):
+    parts = path.split('.')
+    if len(parts) != 2:
+        return
+    section, key = parts
+    in_section = False
+    with open(file, 'r') as f:
+        for line in f:
+            if re.match(r'^\s*#', line): continue
+            if line.startswith(f'{section}:'):
+                in_section = True; continue
+            if in_section and re.match(r'^[a-zA-Z0-9_-]+:', line):
+                in_section = False
+            if in_section:
+                m = re.match(r'^\s+' + re.escape(key) + r':\s*(.*)$', line)
+                if m:
+                    val = m.group(1).strip()
+                    if val.startswith(\'"\'):
+                        end_idx = val.find(\'"\', 1)
+                        if end_idx != -1: val = val[1:end_idx]
+                    elif val.startswith("\'"):
+                        end_idx = val.find("\'", 1)
+                        if end_idx != -1: val = val[1:end_idx]
+                    else:
+                        val = val.split(\' #\')[0].strip()
+                    print(val)
+                    return
+    print('')
+get_val('${CONFIG_FILE}', '${key_path}')
+"
+}
+
+# -----------------------------------------------------------------------------
+# Validation: Ensure os-template.yml exists
+# -----------------------------------------------------------------------------
+if [ ! -f "${CONFIG_FILE}" ]; then
+    echo "Error: os-template.yml not found."
+    echo "Please configure os-template.yml or run scripts/init first."
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Subcommand: doctor
+# -----------------------------------------------------------------------------
+run_doctor() {
+    local missing_params=()
+    
+    local lint_cmd=$(get_yaml_value "commands.lint")
+    if [ -z "${lint_cmd}" ]; then
+        missing_params+=("commands.lint")
+    fi
+
+    local test_cmd=$(get_yaml_value "commands.test")
+    if [ -z "${test_cmd}" ]; then
+        missing_params+=("commands.test")
+    fi
+    
+    local mode=$(get_yaml_value "runtime.mode")
+    if [ "${mode}" != "docker" ] && [ "${mode}" != "host" ]; then
+        missing_params+=("runtime.mode (must be 'docker' or 'host')")
+    elif [ "${mode}" = "docker" ]; then
+        local docker_image=$(get_yaml_value "runtime.docker_image")
+        if [ -z "${docker_image}" ]; then
+            missing_params+=("runtime.docker_image (required for docker mode)")
+        fi
+    fi
+
+    if [ ${#missing_params[@]} -gt 0 ]; then
+        echo "Doctor check failed. Missing or empty required configurations in os-template.yml:"
+        for param in "${missing_params[@]}"; do
+            echo "  - ${param}"
+        done
+        exit 1
+    else
+        echo "Doctor check passed. os-template.yml is correctly configured."
+        
+        local proj_name=$(get_yaml_value "project.name")
+        if [ "${proj_name}" = "YOUR_PROJECT_NAME" ] || [ -z "${proj_name}" ]; then
+            echo "Warning: project.name is still set to placeholder 'YOUR_PROJECT_NAME'."
+        fi
+        local proj_owner=$(get_yaml_value "project.owner")
+        if [ "${proj_owner}" = "YOUR_TEAM_OR_OWNER" ] || [ -z "${proj_owner}" ]; then
+            echo "Warning: project.owner is still set to placeholder 'YOUR_TEAM_OR_OWNER'."
+        fi
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Helper: execute_command
+# Executes the command in docker or host based on runtime.mode
+# -----------------------------------------------------------------------------
+execute_command() {
+    local cmd_str="$1"
+    local mode=$(get_yaml_value "runtime.mode")
+    
+    if [ "${mode}" = "docker" ]; then
+        local docker_image=$(get_yaml_value "runtime.docker_image")
+        if [ -z "${docker_image}" ]; then
+            echo "Error: runtime.mode is 'docker' but runtime.docker_image is not set."
+            exit 1
+        fi
+        docker run --rm -v "${ROOT_DIR}:/app" -w /app "${docker_image}" sh -c "${cmd_str}"
+    else
+        # host mode
+        local host_setup=$(get_yaml_value "runtime.host_setup_steps")
+        if [ -n "${host_setup}" ] && [ "${host_setup}" != "[]" ]; then
+            echo "Note: host_setup_steps is configured in os-template.yml. Ensure you have run them."
+        fi
+        eval "${cmd_str}"
+    fi
+}
+
+show_help() {
+    echo "Usage: scripts/run <command>"
+    echo ""
+    echo "Available commands:"
+    echo "  format       Run the formatter"
+    echo "  lint         Run the linter"
+    echo "  typecheck    Run type checking"
+    echo "  test         Run tests"
+    echo "  build        Run build"
+    echo "  ci           Run lint, typecheck (if configured), and test sequentially"
+    echo "  doctor       Check if os-template.yml is properly configured"
+    echo "  print-config Print the parsed configuration"
+    echo ""
+}
+
+COMMAND="$1"
+shift || true
+
+case "$COMMAND" in
+    help|--help|-h|"")
+        show_help
+        exit 0
+        ;;
+    doctor)
+        run_doctor
+        ;;
+    format|lint|typecheck|test|build)
+        cmd_str=$(get_yaml_value "commands.${COMMAND}")
+        if [ -n "${cmd_str}" ]; then
+            if [ "${cmd_str}" = "echo 'skip'" ] || [ "${cmd_str}" = "echo \"skip\"" ]; then
+                echo "Skipping ${COMMAND} as configured in os-template.yml"
+                exit 0
+            fi
+            echo "Running ${COMMAND}: ${cmd_str}"
+            execute_command "${cmd_str}"
+        else
+            echo "Error: commands.${COMMAND} is not configured in os-template.yml"
+            echo "Running doctor to show missing configurations:"
+            run_doctor
+            exit 1
+        fi
+        ;;
+    ci)
+        echo "--- Running generic CI pipeline ---"
+        ci_cmd=$(get_yaml_value "commands.ci")
+        if [ -n "${ci_cmd}" ]; then
+            echo "Running custom CI command: ${ci_cmd}"
+            execute_command "${ci_cmd}"
+        else
+            echo "[1/3] Running lint"
+            "$0" lint
+            
+            typecheck_cmd=$(get_yaml_value "commands.typecheck")
+            if [ -n "${typecheck_cmd}" ]; then
+                echo "[2/3] Running typecheck"
+                "$0" typecheck
+            else
+                echo "[2/3] Skipping typecheck (not configured)"
+            fi
+            
+            echo "[3/3] Running test"
+            "$0" test
+            
+            echo "CI pipeline completed successfully."
+        fi
+        ;;
+    print-config)
+        echo "Parsed Configuration from os-template.yml:"
+        echo "--- project ---"
+        echo "  project.name         : $(get_yaml_value 'project.name')"
+        echo "  project.owner        : $(get_yaml_value 'project.owner')"
+        echo "--- runtime ---"
+        echo "  runtime.mode         : $(get_yaml_value 'runtime.mode')"
+        echo "  runtime.docker_image : $(get_yaml_value 'runtime.docker_image')"
+        echo "--- commands ---"
+        echo "  commands.format      : $(get_yaml_value 'commands.format')"
+        echo "  commands.lint        : $(get_yaml_value 'commands.lint')"
+        echo "  commands.typecheck   : $(get_yaml_value 'commands.typecheck')"
+        echo "  commands.test        : $(get_yaml_value 'commands.test')"
+        echo "  commands.build       : $(get_yaml_value 'commands.build')"
+        echo "  commands.ci          : $(get_yaml_value 'commands.ci')"
+        echo "--- features ---"
+        echo "  features.secret_scan : $(get_yaml_value 'features.secret_scan')"
+        echo "  features.guardrail   : $(get_yaml_value 'features.guardrail')"
+        echo "--- policy ---"
+        echo "  policy.allow_skip_typecheck: $(get_yaml_value 'policy.allow_skip_typecheck')"
+        ;;
+    *)
+        echo "Unknown command: $COMMAND"
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac
