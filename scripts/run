@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+set -e
+
+# =============================================================================
+# scripts/run
+# =============================================================================
+# Description: The single entrypoint for executing commands defined in os-template.yml.
+# It provides a unified command set for both local development and CI.
+# =============================================================================
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${ROOT_DIR}/os-template.yml"
+
+# -----------------------------------------------------------------------------
+# Helper: get_yaml_value
+# Extract values from os-template.yml without relying on external yq.
+# -----------------------------------------------------------------------------
+get_yaml_value() {
+    local key_path="$1"
+    python3 -c "
+import sys, re, json
+def get_val(file, path):
+    parts = path.split('.')
+    if len(parts) != 2:
+        return
+    section, key = parts
+    in_section = False
+    with open(file, 'r') as f:
+        for line in f:
+            if re.match(r'^\s*#', line): continue
+            if line.startswith(f'{section}:'):
+                in_section = True; continue
+            if in_section and re.match(r'^[a-zA-Z0-9_-]+:', line):
+                in_section = False
+            if in_section:
+                m = re.match(r'^\s+' + re.escape(key) + r':\s*(.*)$', line)
+                if m:
+                    val = m.group(1).split('#')[0].strip()
+                    if len(val) >= 2 and val[0] in '\"\'': val = val[1:-1]
+                    print(val)
+                    return
+    print('')
+get_val('${CONFIG_FILE}', '${key_path}')
+"
+}
+
+# -----------------------------------------------------------------------------
+# Validation: Ensure os-template.yml exists
+# -----------------------------------------------------------------------------
+if [ ! -f "${CONFIG_FILE}" ]; then
+    echo "Error: os-template.yml not found."
+    echo "Please configure os-template.yml or run scripts/init first."
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Subcommand: doctor
+# -----------------------------------------------------------------------------
+run_doctor() {
+    local missing_params=()
+    
+    local lint_cmd=$(get_yaml_value "commands.lint")
+    if [ -z "${lint_cmd}" ]; then
+        missing_params+=("commands.lint")
+    fi
+
+    local test_cmd=$(get_yaml_value "commands.test")
+    if [ -z "${test_cmd}" ]; then
+        missing_params+=("commands.test")
+    fi
+    
+    local mode=$(get_yaml_value "runtime.mode")
+    if [ "${mode}" = "docker" ]; then
+        local docker_image=$(get_yaml_value "runtime.docker_image")
+        if [ -z "${docker_image}" ]; then
+            missing_params+=("runtime.docker_image (required for docker mode)")
+        fi
+    fi
+
+    if [ ${#missing_params[@]} -gt 0 ]; then
+        echo "Doctor check failed. Missing or empty required configurations in os-template.yml:"
+        for param in "${missing_params[@]}"; do
+            echo "  - ${param}"
+        done
+        exit 1
+    else
+        echo "Doctor check passed. os-template.yml is correctly configured."
+    fi
+}
+
+show_help() {
+    echo "Usage: scripts/run <command>"
+    echo ""
+    echo "Available commands:"
+    echo "  format       Run the formatter"
+    echo "  lint         Run the linter"
+    echo "  typecheck    Run type checking"
+    echo "  test         Run tests"
+    echo "  build        Run build"
+    echo "  ci           Run lint, typecheck (if configured), and test sequentially"
+    echo "  doctor       Check if os-template.yml is properly configured"
+    echo "  print-config Print the parsed configuration"
+    echo ""
+}
+
+COMMAND="$1"
+shift || true
+
+case "$COMMAND" in
+    doctor)
+        run_doctor
+        ;;
+    format|lint|typecheck|test|build|ci|print-config)
+        echo "Command '${COMMAND}' is not yet implemented (Commit 1)."
+        exit 1
+        ;;
+    *)
+        show_help
+        if [ -n "$COMMAND" ]; then
+            echo "Unknown command: $COMMAND"
+            exit 1
+        fi
+        exit 0
+        ;;
+esac
