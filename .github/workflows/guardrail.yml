@@ -1,0 +1,36 @@
+name: Guardrail CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  guardrail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if guardrail is enabled
+        id: check
+        run: |
+          if grep -E "^[[:space:]]*guardrail:[[:space:]]*true" os-template.yml > /dev/null; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+            echo "Guardrail is enabled in os-template.yml."
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "Guardrail is disabled in os-template.yml. Skipping."
+          fi
+
+      - name: Run Guardrail
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/guardrail
