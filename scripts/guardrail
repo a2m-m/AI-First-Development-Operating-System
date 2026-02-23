@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+import re
+
+def run_command(cmd, shell=False):
+    if isinstance(cmd, str) and not shell:
+        import shlex
+        cmd = shlex.split(cmd)
+    result = subprocess.run(cmd, shell=shell, capture_output=True, text=True)
+    return result
+
+def get_ai_review_mock():
+    # Mocking an AI response that follows the prompt format
+    return """
+Severity: MEDIUM
+Finding: 潜在的なバグへの対策が不足しています。
+Why: エッジケースにおけるバリデーションが実装されていないため、予期せぬ入力でクラッシュする恐れがあります。
+Fix direction: 入力に対する事前検証（バリデーション処理）を追加してください。
+Example:
+if not validate(input):
+    return
+Learn more: https://example.com/safe-validation
+"""
+
+def parse_ai_response(response_text):
+    data = {
+        "Severity": "LOW",
+        "Finding": "",
+        "Why": "",
+        "Fix direction": "",
+        "Example": "",
+        "Learn more": ""
+    }
+    
+    patterns = {
+        "Severity": r"Severity:\s*(BLOCKER|HIGH|MEDIUM|LOW|NIT)",
+        "Finding": r"Finding:\s*(.*?)(?=\nWhy:|$)",
+        "Why": r"Why:\s*(.*?)(?=\nFix direction:|$)",
+        "Fix direction": r"Fix direction:\s*(.*?)(?=\nExample:|$)",
+        "Example": r"Example:\s*(.*?)(?=\nLearn more:|$)",
+        "Learn more": r"Learn more:\s*(.*)"
+    }
+    
+    for key, pattern in patterns.items():
+        match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
+        if match:
+            data[key] = match.group(1).strip()
+            
+    return data
+
+def format_pr_comment(parsed_data):
+    if not parsed_data.get("Finding"):
+        return None # 指摘がない場合
+        
+    comment = f"### 🤖 AI Guardrail Review\n\n"
+    comment += f"- **Severity**: {parsed_data.get('Severity', 'LOW')}\n"
+    comment += f"- **Finding**: {parsed_data.get('Finding', '')}\n"
+    comment += f"- **Why**: {parsed_data.get('Why', '')}\n"
+    comment += f"- **Fix direction**: {parsed_data.get('Fix direction', '')}\n"
+    
+    example = parsed_data.get('Example', '')
+    if example:
+        if not example.startswith('```'):
+            comment += f"- **Example**:\n```\n{example}\n```\n"
+        else:
+            comment += f"- **Example**:\n{example}\n"
+            
+    learn_more = parsed_data.get('Learn more', '')
+    if learn_more:
+        comment += f"- **Learn more**: {learn_more}\n"
+        
+    return comment
+
+def main():
+    gh_token = os.environ.get("GITHUB_TOKEN")
+    if not gh_token:
+        print("GITHUB_TOKEN is not set. Assuming local run, skipping PR comment posting.")
+        
+    # Get mock AI output
+    ai_output = get_ai_review_mock()
+    
+    # Parse output
+    parsed_data = parse_ai_response(ai_output)
+    
+    # Format comment
+    comment_body = format_pr_comment(parsed_data)
+    
+    if not comment_body:
+        print("No findings from Guardrail. Exiting successfully.")
+        sys.exit(0)
+        
+    print("Parsed Guardrail Response:")
+    print("--------------------------")
+    print(comment_body)
+    print("--------------------------")
+    
+    if gh_token:
+        # Determine PR number
+        pr_number = None
+        github_ref = os.environ.get("GITHUB_REF", "")
+        if github_ref.startswith("refs/pull/"):
+            pr_number = github_ref.split("/")[2]
+            
+        if not pr_number:
+            res = run_command("gh pr view --json number -q .number")
+            if res.returncode == 0:
+                pr_number = res.stdout.strip()
+                
+        if pr_number:
+            import tempfile
+            fd, tmp_path = tempfile.mkstemp(suffix=".md")
+            with os.fdopen(fd, "w") as f:
+                f.write(comment_body)
+                
+            comment_cmd = ["gh", "pr", "comment", str(pr_number), "-F", tmp_path]
+            print(f"Posting comment: gh pr comment {pr_number} -F {tmp_path}")
+            res = subprocess.run(comment_cmd, capture_output=True, text=True)
+            if res.returncode != 0:
+                print(f"Failed to post PR comment. {res.stderr}")
+                
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        else:
+            print("Could not determine PR number. Skipping commenting.")
+
+    # Apply blocking policy
+    severity = parsed_data.get("Severity", "LOW").upper()
+    if severity in ["BLOCKER", "HIGH"]:
+        print(f"::error::Guardrail found issues with severity {severity}. Please review the PR comments.")
+        sys.exit(1)
+    else:
+        print(f"Guardrail check passed with severity {severity} (No string blocking required).")
+        sys.exit(0)
+
+if __name__ == "__main__":
+    main()
