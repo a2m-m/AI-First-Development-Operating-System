@@ -51,7 +51,7 @@ features:
   secret_scan: true                   # シークレット検知
   dependency_scan: true               # 依存パッケージ脆弱性スキャン
   guardrail: true                     # AI 監査レビュー（PRコメント）
-  lcg: true                           # Learning Content Generator（段階導入のためデフォルト OFF）
+  lcg: false                          # Learning Content Generator（段階導入のためデフォルト OFF）
 
 # ---------------------------------------------------------------------------
 # policy: プロジェクトポリシー
