@@ -4,6 +4,7 @@ import argparse
 import sys
 import os
 import re
+import subprocess
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 CONFIG_FILE = os.path.join(ROOT_DIR, 'os-template.yml')
@@ -184,6 +185,16 @@ def update_ai_context():
         
     print(f"Initialized: {AI_CONTEXT_FILE}")
 
+def setup_git_hooks():
+    try:
+        result = subprocess.run(["git", "config", "core.hooksPath", "scripts/hooks"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("Git hooks configured: core.hooksPath set to scripts/hooks")
+        else:
+            print(f"Warning: Failed to set git core.hooksPath: {result.stderr.strip()}")
+    except Exception as e:
+        print(f"Warning: Failed to set git core.hooksPath: {e}")
+
 def print_next_steps(runtime_mode):
     print("\n" + "="*50)
     print("Instance Initialization Successful!")
@@ -210,6 +221,8 @@ def main():
     update_os_template(project_name, owner, description, runtime_mode, docker_image)
     update_readme(project_name, owner)
     update_ai_context()
+    
+    setup_git_hooks()
     
     print_next_steps(runtime_mode)
 

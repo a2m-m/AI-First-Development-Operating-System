@@ -66,7 +66,7 @@ cd YOUR_PROJECT_NAME
 ### 2.2 初期化
 
 ```bash
-# Instance の初期化（プレースホルダ置換・os-template.yml 生成）
+# Instance の初期化（プレースホルダ置換・os-template.yml 生成・git hooks 設定）
 ./scripts/init \
   --project-name YOUR_PROJECT_NAME \
   --owner YOUR_TEAM_OR_OWNER \
@@ -181,9 +181,15 @@ policy:
 
 ### 4.3 Pre-Push Gate
 
+`scripts/hooks/pre-push` により、ローカルでの `git push` 時にも以下のチェックが自動で走る。
+
 ```bash
 ./scripts/run ci   # lint / typecheck / test を実行
 ```
+
+巨大な差分（`os-template.yml` の `policy.max_diff_warning` / `policy.max_file_warning` を超過する変更）が含まれないかも併せてチェックされ、警告が表示される（push は継続される）。
+
+> **Note**: 緊急時などでフックをスキップしたい場合は `git push --no-verify` を使用可能。ただし、不正なコードは最終的に CI でブロックされる。
 
 ### 4.4 PR を作成し、レビュー・CI を通す
 
