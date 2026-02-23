@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+# =============================================================================
+# pre-push hook: Runs tests and checks for huge diffs before pushing
+# =============================================================================
+
+echo "Running pre-push checks..."
+
+# 1. Run the standard CI pipeline
+if ! ./scripts/run ci; then
+    echo ""
+    echo "[ERROR] Pre-push checks failed. Push aborted."
+    echo "Please fix the issues above and try again."
+    echo "(You can skip this hook using 'git push --no-verify', but CI will still check it)"
+    exit 1
+fi
+
+# 2. Check for huge diffs
+if [ -f "os-template.yml" ]; then
+    # Simple extraction using grep (with fallback defaults)
+    MAX_DIFF=$(grep -E '^\s*max_diff_warning:' os-template.yml | awk -F':' '{print $2}' | awk '{print $1}')
+    MAX_FILE=$(grep -E '^\s*max_file_warning:' os-template.yml | awk -F':' '{print $2}' | awk '{print $1}')
+
+    MAX_DIFF=${MAX_DIFF:-1200}
+    MAX_FILE=${MAX_FILE:-30}
+
+    # pre-push receives ref info on stdin: <local ref> <local sha1> <remote ref> <remote sha1>
+    while read -r local_ref local_oid remote_ref remote_oid; do
+        # Ignore deleted branches
+        if [ "$local_oid" = "0000000000000000000000000000000000000000" ]; then
+            continue
+        fi
+
+        DIFF_TARGET=""
+        
+        if [ "$remote_oid" = "0000000000000000000000000000000000000000" ]; then
+            # New branch. Compare against origin/main or origin/master if they exist
+            if git rev-parse --verify origin/main >/dev/null 2>&1; then
+                DIFF_TARGET="origin/main"
+            elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+                DIFF_TARGET="origin/master"
+            fi
+        else
+            # Existing branch. Compare against the remote ref we are pushing to
+            DIFF_TARGET="$remote_oid"
+        fi
+
+        if [ -n "$DIFF_TARGET" ]; then
+            # Calculate stats between the target and what we are pushing
+            STATS=$(git diff --shortstat "$DIFF_TARGET"..."$local_oid" 2>/dev/null)
+            
+            if [ -n "$STATS" ]; then
+                FILES_CHANGED=$(echo "$STATS" | grep -oE '[0-9]+ file' | awk '{print $1}' || echo 0)
+                INSERTIONS=$(echo "$STATS" | grep -oE '[0-9]+ insertion' | awk '{print $1}' || echo 0)
+                DELETIONS=$(echo "$STATS" | grep -oE '[0-9]+ deletion' | awk '{print $1}' || echo 0)
+                
+                FILES_CHANGED=${FILES_CHANGED:-0}
+                INSERTIONS=${INSERTIONS:-0}
+                DELETIONS=${DELETIONS:-0}
+                
+                TOTAL_LINES=$((INSERTIONS + DELETIONS))
+                
+                WARNINGS=()
+                
+                if [ "$TOTAL_LINES" -gt "$MAX_DIFF" ]; then
+                    WARNINGS+=("Diff size ($TOTAL_LINES lines) exceeds policy.max_diff_warning ($MAX_DIFF)!")
+                fi
+                
+                if [ "$FILES_CHANGED" -gt "$MAX_FILE" ]; then
+                    WARNINGS+=("Files changed ($FILES_CHANGED files) exceeds policy.max_file_warning ($MAX_FILE)!")
+                fi
+                
+                if [ ${#WARNINGS[@]} -gt 0 ]; then
+                    echo ""
+                    echo "======================================================================"
+                    echo "⚠️  WARNING: Huge Diff Detected"
+                    echo "======================================================================"
+                    for w in "${WARNINGS[@]}"; do
+                        echo "  - $w"
+                    done
+                    echo ""
+                    echo "This is just a warning. The push will proceed."
+                    echo "Consider splitting your PR if it covers multiple concerns."
+                    echo "======================================================================"
+                    echo ""
+                fi
+            fi
+        fi
+    done
+fi
+
+exit 0
