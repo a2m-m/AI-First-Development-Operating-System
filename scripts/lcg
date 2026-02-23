@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+import re
+import tempfile
+import yaml
+
+def run_command(cmd, shell=False):
+    if isinstance(cmd, str) and not shell:
+        import shlex
+        cmd = shlex.split(cmd)
+    result = subprocess.run(cmd, shell=shell, capture_output=True, text=True)
+    return result
+
+def get_config():
+    try:
+        with open('os-template.yml', 'r') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        print(f"Warning: Failed to load os-template.yml: {e}")
+        return {}
+
+def is_huge_diff(config):
+    max_diff_warning = config.get('policy', {}).get('max_diff_warning', 1200)
+    
+    # Calculate PR diff size
+    res = run_command("git diff origin/main...HEAD --shortstat")
+    if res.returncode != 0:
+        return False
+        
+    stat_output = res.stdout.strip()
+    # e.g. " 3 files changed, 50 insertions(+), 20 deletions(-)"
+    insertions = 0
+    deletions = 0
+    
+    ins_match = re.search(r'(\d+) insertion', stat_output)
+    if ins_match:
+        insertions = int(ins_match.group(1))
+        
+    del_match = re.search(r'(\d+) deletion', stat_output)
+    if del_match:
+        deletions = int(del_match.group(1))
+        
+    total_diff = insertions + deletions
+    print(f"Diff size: {total_diff} lines (Threshold: {max_diff_warning})")
+    
+    return total_diff > max_diff_warning
+
+def get_ai_lcg_mock(is_huge):
+    # Mocking AI response based on diff size (Huge diff = prioritize summary)
+    if is_huge:
+        return """
+Summary: 巨大な変更があったため要約を優先します。多数のファイルの追加変更が行われました。
+Quiz 1: 巨大なコミットを責務ごとに分割するための基準は何ですか？
+Quiz 2: この変更による影響範囲を抑えるために、CIでどのテストが重要になりますか？
+Explore next: 巨大なPRを避けるための設計の分割方法について
+"""
+    else:
+        return """
+Summary: 設定ファイルの追加とLCGワークフローの骨格が整備されました。
+Deep Dive:
+- `.github/workflows/lcg.yml`: OSのフィーチャーフラグに基づいて動作を切り替える設計パターンです。
+Quiz 1: `features.lcg` が `false` の場合にワークフローがスキップされる仕組みはどのように実装されていますか？
+Quiz 2: Github Actions における `contents: write` 権限の用途は何ですか？
+Explore next: AIがソースコードをコンテキスト付きで解釈するための最適なプロンプト設計について
+"""
+
+def parse_ai_response(response_text):
+    data = {
+        "Summary": "",
+        "Deep Dive": [],
+        "Quiz": [],
+        "Explore next": ""
+    }
+    
+    # 簡易パース処理
+    lines = response_text.strip().split('\n')
+    current_section = None
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        if line.startswith("Summary:"):
+            current_section = "Summary"
+            data["Summary"] = line.replace("Summary:", "").strip()
+        elif line.startswith("Deep Dive:"):
+            current_section = "Deep Dive"
+        elif line.startswith(("-", "*", "•")) and current_section == "Deep Dive":
+            data["Deep Dive"].append(line.lstrip("-*• ").strip())
+        elif line.startswith("Quiz"):
+            current_section = "Quiz"
+            q_match = re.search(r'Quiz \d+:(.*)', line)
+            if q_match:
+                 data["Quiz"].append(q_match.group(1).strip())
+        elif line.startswith("Explore next:"):
+            current_section = "Explore next"
+            data["Explore next"] = line.replace("Explore next:", "").strip()
+        else:
+            if current_section == "Summary":
+                data["Summary"] += "\n" + line
+            elif current_section == "Explore next":
+                 data["Explore next"] += "\n" + line
+                 
+    return data
+
+def format_pr_comment(parsed_data):
+    # PRコメントには Summary + Quiz を投稿
+    comment = "### 📚 Learning Content Generator\n\n"
+    
+    if parsed_data.get("Summary"):
+        comment += f"**📝 Summary**\n{parsed_data['Summary']}\n\n"
+        
+    if parsed_data.get("Quiz"):
+        comment += "**🧠 Quiz (理解度確認)**\n"
+        for i, q in enumerate(parsed_data["Quiz"], 1):
+            comment += f"{i}. {q}\n"
+        comment += "\n"
+        
+    if parsed_data.get("Explore next"):
+        comment += f"**🚀 Explore next**\n{parsed_data['Explore next']}\n"
+        
+    return comment
+
+def format_asset_doc(parsed_data):
+    # 資産化用のLong Form (Deep Dive含む)
+    doc = "# Learning Content: PR Updates\n\n"
+    
+    if parsed_data.get("Summary"):
+        doc += f"## Summary\n{parsed_data['Summary']}\n\n"
+        
+    if parsed_data.get("Deep Dive"):
+        doc += "## Deep Dive\n"
+        for item in parsed_data["Deep Dive"]:
+             doc += f"- {item}\n"
+        doc += "\n"
+        
+    if parsed_data.get("Quiz"):
+        doc += "## Quiz\n"
+        for i, q in enumerate(parsed_data["Quiz"], 1):
+            doc += f"{i}. {q}\n"
+        doc += "\n"
+        
+    if parsed_data.get("Explore next"):
+        doc += f"## Explore next\n{parsed_data['Explore next']}\n"
+        
+    return doc
+
+def commit_asset(doc_content):
+    asset_dir = "docs/learning/commits"
+    if not os.path.exists(asset_dir):
+        # Spec says create docs/learning/commits/, trigger on existing .gitkeep, 
+        # but let's just make sure it creates it and commits.
+        os.makedirs(asset_dir, exist_ok=True)
+        
+    # Get short commit hash of HEAD to use as filename
+    res = run_command("git rev-parse --short HEAD")
+    if res.returncode == 0:
+        hash_val = res.stdout.strip()
+    else:
+        hash_val = "unknown"
+        
+    filename = f"{asset_dir}/{hash_val}.md"
+    with open(filename, "w") as f:
+        f.write(doc_content)
+        
+    print(f"Created learning material asset: {filename}")
+    
+    # Configure git inside GH actions
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+         run_command('git config user.name "github-actions[bot]"')
+         run_command('git config user.email "github-actions[bot]@users.noreply.github.com"')
+    
+    # Commit and push
+    run_command(f'git add {filename}')
+    res_commit = run_command(f'git commit -m "docs: auto-generate learning content for {hash_val}"')
+    
+    if res_commit.returncode == 0:
+        print("Committed learning material successfully.")
+        # Attempt to push
+        res_push = run_command('git push origin HEAD')
+        if res_push.returncode != 0:
+            print(f"Warning: Push failed. Might need to adjust branch protection. {res_push.stderr}")
+        else:
+            print("Pushed learning material successfully.")
+    else:
+        print("Nothing to commit for learning material (file might already exist and is unchanged).")
+
+def main():
+    gh_token = os.environ.get("GITHUB_TOKEN")
+    if not gh_token:
+        print("GITHUB_TOKEN is not set. Assuming local test run.")
+        
+    config = get_config()
+    huge_diff = is_huge_diff(config)
+    
+    # Get mock AI output
+    ai_output = get_ai_lcg_mock(huge_diff)
+    
+    # Parse output
+    parsed_data = parse_ai_response(ai_output)
+    
+    # Format and Post PR Comment
+    comment_body = format_pr_comment(parsed_data)
+    print("----- PR COMMENT -----")
+    print(comment_body)
+    print("----------------------")
+    
+    if gh_token:
+        # Determine PR number
+        pr_number = None
+        github_ref = os.environ.get("GITHUB_REF", "")
+        if github_ref.startswith("refs/pull/"):
+            pr_number = github_ref.split("/")[2]
+            
+        if not pr_number:
+            res = run_command("gh pr view --json number -q .number")
+            if res.returncode == 0:
+                pr_number = res.stdout.strip()
+                
+        if pr_number:
+            fd, tmp_path = tempfile.mkstemp(suffix=".md")
+            with os.fdopen(fd, "w") as f:
+                f.write(comment_body)
+                
+            comment_cmd = ["gh", "pr", "comment", str(pr_number), "-F", tmp_path]
+            print(f"Posting comment: gh pr comment {pr_number} -F {tmp_path}")
+            res = subprocess.run(comment_cmd, capture_output=True, text=True)
+            if res.returncode != 0:
+                print(f"Failed to post PR comment. {res.stderr}")
+                
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        else:
+            print("Could not determine PR number. Skipping PR comment posting.")
+
+    # Save and commit Long Form Doc
+    doc_body = format_asset_doc(parsed_data)
+    commit_asset(doc_body)
+    
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
