@@ -184,6 +184,13 @@ def update_ai_context():
         
     print(f"Initialized: {AI_CONTEXT_FILE}")
 
+def setup_git_hooks():
+    try:
+        os.system("git config core.hooksPath scripts/hooks")
+        print("Git hooks configured: core.hooksPath set to scripts/hooks")
+    except Exception as e:
+        print(f"Warning: Failed to set git core.hooksPath: {e}")
+
 def print_next_steps(runtime_mode):
     print("\n" + "="*50)
     print("Instance Initialization Successful!")
@@ -210,6 +217,8 @@ def main():
     update_os_template(project_name, owner, description, runtime_mode, docker_image)
     update_readme(project_name, owner)
     update_ai_context()
+    
+    setup_git_hooks()
     
     print_next_steps(runtime_mode)
 
