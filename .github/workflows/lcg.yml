@@ -1,0 +1,41 @@
+name: Learning Content Generator
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  lcg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Check if LCG is enabled
+        id: check
+        run: |
+          if awk '/^features:/ {in_features=1} /^policy:/ {in_features=0} in_features && /^[[:space:]]*lcg:[[:space:]]*true/ {found=1} END {exit !found}' os-template.yml; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+            echo "LCG is enabled in os-template.yml."
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "LCG is disabled in os-template.yml. Skipping."
+          fi
+
+      - name: Run LCG
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/lcg
