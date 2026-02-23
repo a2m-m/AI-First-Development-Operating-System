@@ -183,8 +183,14 @@ def commit_asset(doc_content):
     
     if res_commit.returncode == 0:
         print("Committed learning material successfully.")
-        # Attempt to push
-        res_push = run_command('git push origin HEAD')
+        
+        # Determine branch to push to
+        push_ref = "HEAD"
+        github_head_ref = os.environ.get("GITHUB_HEAD_REF")
+        if github_head_ref:
+            push_ref = f"HEAD:refs/heads/{github_head_ref}"
+            
+        res_push = run_command(f'git push origin {push_ref}')
         if res_push.returncode != 0:
             print(f"Warning: Push failed. Might need to adjust branch protection. {res_push.stderr}")
         else:
