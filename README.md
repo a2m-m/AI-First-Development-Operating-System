@@ -256,6 +256,7 @@ PR を merge する最低条件：
 - CI 落ちの原因トップを潰す
 - Guardrail で同じ指摘が続く場合は Template 側を改善する
 - Template 自体の Changelog を更新する
+- 改善ループの具体的な運用フローについては、[docs/tuning-guide.md](docs/tuning-guide.md) を参照すること。
 
 ### 6.3 Template の進化ルール
 
@@ -273,5 +274,6 @@ PR を merge する最低条件：
 | `02_OS_Template_Spec.md` | Template Repo の仕様（設計図） |
 | `03_Project_Instance_Guide.md` | Instance の立ち上げ手順（手順書） |
 | `docs/architecture.md` | アーキテクチャ・設計方針 |
+| `docs/tuning-guide.md` | 改善ループ運用ガイド（仕組み更新のプロセス） |
 | `.ai-instructions.md` | AI エージェント向け共通規約 |
 | `.ai-context.md` | 現在の状態・進行中 Issue・次の手 |
