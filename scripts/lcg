@@ -4,7 +4,7 @@ import sys
 import subprocess
 import re
 import tempfile
-import yaml
+
 
 def run_command(cmd, shell=False):
     if isinstance(cmd, str) and not shell:
@@ -14,12 +14,16 @@ def run_command(cmd, shell=False):
     return result
 
 def get_config():
+    config = {'policy': {'max_diff_warning': 1200}}
     try:
         with open('os-template.yml', 'r') as f:
-            return yaml.safe_load(f)
+            content = f.read()
+            match = re.search(r'max_diff_warning:\s*(\d+)', content)
+            if match:
+                 config['policy']['max_diff_warning'] = int(match.group(1))
     except Exception as e:
-        print(f"Warning: Failed to load os-template.yml: {e}")
-        return {}
+        print(f"Warning: Failed to parse max_diff_warning from os-template.yml: {e}")
+    return config
 
 def is_huge_diff(config):
     max_diff_warning = config.get('policy', {}).get('max_diff_warning', 1200)
