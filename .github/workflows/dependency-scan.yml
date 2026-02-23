@@ -1,0 +1,50 @@
+name: Dependency Scan
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 0' # 毎週日曜日の深夜0時に実行
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write # dependabot/security alerts のために必要になる場合あり
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Dependency Scan Enabled
+        id: check-scan
+        run: |
+          if [ -f "os-template.yml" ]; then
+            ENABLED=$(python3 -c '
+          import sys, re
+          for line in open("os-template.yml"):
+              m = re.match(r"^\s+dependency_scan:\s*(true|false)", line)
+              if m:
+                  print(m.group(1).lower())
+                  sys.exit(0)
+          print("true")')
+          else
+            ENABLED="true"
+          fi
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+
+      - name: Run Trivy vulnerability scanner in fs mode
+        if: steps.check-scan.outputs.enabled == 'true'
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          # 出力形式を保ちつつ、PR コメントなどで使えるようにする場合は別の設定が必要になる場合があります。
+          # ここでは標準の exit 1 をトリガーする fail 挙動を持たせます。
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
