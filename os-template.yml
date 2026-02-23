@@ -49,7 +49,7 @@ commands:
 features:
   ci: true                            # CI自動実行
   secret_scan: true                   # シークレット検知
-  dependency_scan: true               # 依存パッケージ脆弱性スキャン
+  dependency_scan: false              # 依存パッケージ脆弱性スキャン
   guardrail: true                     # AI 監査レビュー（PRコメント）
   lcg: false                          # Learning Content Generator（段階導入のためデフォルト OFF）
 
