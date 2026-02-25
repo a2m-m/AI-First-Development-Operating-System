@@ -3,6 +3,9 @@ import os
 import sys
 import subprocess
 import re
+import urllib.request
+import urllib.error
+import json
 
 def run_command(cmd, shell=False):
     if isinstance(cmd, str) and not shell:
@@ -11,20 +14,102 @@ def run_command(cmd, shell=False):
     result = subprocess.run(cmd, shell=shell, capture_output=True, text=True)
     return result
 
-def get_ai_review_mock():
-    # Mocking an AI response that follows the prompt format
-    return """
-Severity: MEDIUM
-Finding: 潜在的なバグへの対策が不足しています。
-Why: エッジケースにおけるバリデーションが実装されていないため、予期せぬ入力でクラッシュする恐れがあります。
-Fix direction: 入力に対する事前検証（バリデーション処理）を追加してください。
-Example:
-if not validate(input):
-    return
-Learn more: https://example.com/safe-validation
-"""
+def get_diff_text():
+    # 1. ワークスペース上で現在の PR を取得 (gh pr view)
+    pr_number = None
+    github_ref = os.environ.get("GITHUB_REF", "")
+    if github_ref.startswith("refs/pull/"):
+        pr_number = github_ref.split("/")[2]
+        
+    if not pr_number:
+        res = run_command("gh pr view --json number -q .number")
+        if res.returncode == 0:
+            pr_number = res.stdout.strip()
+            
+    if pr_number:
+        res = run_command(f"gh pr diff {pr_number}")
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout
+            
+    # 2. PRが取得できなければローカルの origin/mainからの差分
+    res = run_command("git diff origin/main...HEAD")
+    if res.returncode == 0 and res.stdout.strip():
+        return res.stdout
+        
+    # 3. それでも無ければ現在のワーキングツリーの差分
+    res = run_command("git diff HEAD")
+    if res.returncode == 0:
+        return res.stdout
+        
+    return ""
 
-def parse_ai_response(response_text):
+def get_ai_review():
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("GEMINI_API_KEY is not set. Skipping real AI review.")
+        sys.exit(0)
+        
+    diff_text = get_diff_text()
+    if not diff_text.strip():
+        print("No diff found. Skipping review.")
+        sys.exit(0)
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    
+    prompt = f"""
+あなたは強力なコードレビュワー（QA/Architect）です。以下のコード差分をレビューし、問題点があれば教育的なフィードバックをJSON形式で提供してください。
+JSON形式のスキーマは以下の通りです。JSON以外は出力しないでください。問題が特にない場合でも、何らかの指摘（NITなど）を行うか、ダミーの回答をしてください。
+
+```json
+{{
+  "Severity": "BLOCKER|HIGH|MEDIUM|LOW|NIT",
+  "Finding": "問題の概要",
+  "Why": "なぜそれが問題なのか、教育的な解説",
+  "Fix direction": "修正の方向性",
+  "Example": "修正例のコード。マークダウンのブロックを使用（省略可）",
+  "Learn more": "参考となるURLやキーワード（省略可）"
+}}
+```
+
+Diff:
+```diff
+{diff_text}
+```
+"""
+    
+    data = {"contents": [{"parts": [{"text": prompt}]}]}
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(data).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            # LLM may wrap JSON in markdown block like ```json ... ```
+            text = text.strip()
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            text = text.strip()
+            return json.loads(text)
+    except urllib.error.URLError as e:
+        print(f"Failed to call Gemini API: {e}")
+        if hasattr(e, 'read'):
+            print(e.read().decode('utf-8'))
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse JSON from Gemini API: {e}")
+        # Try to print the raw text if possible, though it might fail if text is undefined here.
+        sys.exit(1)
+
+def parse_ai_response(response_data):
+    # This function is now just ensuring default values since response_data is expected to be a dict
     data = {
         "Severity": "LOW",
         "Finding": "",
@@ -34,20 +119,14 @@ def parse_ai_response(response_text):
         "Learn more": ""
     }
     
-    patterns = {
-        "Severity": r"Severity:\s*(BLOCKER|HIGH|MEDIUM|LOW|NIT)",
-        "Finding": r"Finding:\s*(.*?)(?=\nWhy:|$)",
-        "Why": r"Why:\s*(.*?)(?=\nFix direction:|$)",
-        "Fix direction": r"Fix direction:\s*(.*?)(?=\nExample:|$)",
-        "Example": r"Example:\s*(.*?)(?=\nLearn more:|$)",
-        "Learn more": r"Learn more:\s*(.*)"
-    }
-    
-    for key, pattern in patterns.items():
-        match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
-        if match:
-            data[key] = match.group(1).strip()
-            
+    if isinstance(response_data, dict):
+        for key in data.keys():
+            if key in response_data:
+                data[key] = response_data[key]
+            # Handle possible lowercase keys from JSON if the LLM ignores the schema casing
+            elif key.lower() in response_data:
+                data[key] = response_data[key.lower()]
+                
     return data
 
 def format_pr_comment(parsed_data):
@@ -78,8 +157,8 @@ def main():
     if not gh_token:
         print("GITHUB_TOKEN is not set. Assuming local run, skipping PR comment posting.")
         
-    # Get mock AI output
-    ai_output = get_ai_review_mock()
+    # Get real AI output based on diff
+    ai_output = get_ai_review()
     
     # Parse output
     parsed_data = parse_ai_response(ai_output)

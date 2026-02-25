@@ -1,11 +1,13 @@
 {
-    "mcpServers": {
-        "claude-code": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "claude-code-mcp"
-            ]
-        }
+  "mcpServers": {
+    "claude-code-review": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "claude-code-mcp"
+      ],
+      "env": {}
     }
+  }
 }

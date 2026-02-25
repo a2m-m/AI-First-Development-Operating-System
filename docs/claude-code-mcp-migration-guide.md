@@ -102,57 +102,73 @@ export ANTHROPIC_API_KEY=sk-ant-xxxxx
 
 ## 3. セットアップ手順
 
-### 3.1 ステップ1: Claude Code の初回パーミッション承認
-
-MCP サーバーとして動作させるには、事前にパーミッションの承認が必要。**初回のみ**実行する。
+### 3.1 ステップ1: Claude Code のインストールと初回パーミッション承認
 
 ```bash
 # Claude Code がまだインストールされていない場合
 npm install -g @anthropic-ai/claude-code
 
-# パーミッションを承認（初回のみ）
+# バージョン確認
+claude --version
+
+# パーミッションを承認（初回のみ・MCP サーバー動作に必要）
 claude --dangerously-skip-permissions
 ```
 
 > ⚠️ **注意**: `--dangerously-skip-permissions` は、Claude Code がファイル操作やコマンド実行を確認なしで行えるようにするオプション。MCP サーバーとして動かすために必要だが、信頼できる環境でのみ使用すること。
 
-### 3.2 ステップ2: プロジェクトの `.mcp.json` を作成
+### 3.2 ステップ2: `claude mcp add` で MCP サーバーを登録
 
-プロジェクトのルートディレクトリに `.mcp.json` を作成する。
+`.mcp.json` を手書きする必要はない。**`claude mcp add` コマンド**で登録するのが公式かつ確実な方法。
+
+#### `claude mcp` の主要コマンド一覧
+
+| コマンド | 用途 |
+|---------|------|
+| `claude mcp add <name> -- <command> [args...]` | MCPサーバーを追加 |
+| `claude mcp add-json <name> '<json>'` | JSON形式で直接追加（複雑な設定向け） |
+| `claude mcp list` | 登録済みサーバーの一覧表示 |
+| `claude mcp get <name>` | 特定サーバーの詳細表示・接続テスト |
+| `claude mcp remove <name>` | サーバーの削除 |
+
+#### `--scope` オプション（設定の保存先を選ぶ）
+
+| scope | 保存先 | 用途 |
+|-------|--------|------|
+| `local`（デフォルト） | `.claude/` 配下（ローカルのみ） | 自分だけが使う設定 |
+| `project` | `.mcp.json`（リポジトリに含まれる） | **チーム全員で共有する場合に推奨** |
+| `user` | ユーザーグローバル設定 | 全プロジェクト共通で使いたい場合 |
+
+> 💡 **このプロジェクトでは `--scope project`** を推奨。`.mcp.json` がリポジトリに入るため、Antigravity 側からも参照でき、チームメンバー間で設定が統一される。
+
+---
 
 #### 方法A: steipete/claude-code-mcp を使う（推奨）
 
-コミュニティ製のラッパーで、ワンショット実行に特化している。コンテキスト節約の目的に最適。
+コミュニティ製のラッパーで、**ワンショット実行に特化**している。レビュー用途に最適。
 
-```json
-{
-  "mcpServers": {
-    "claude-code": {
-      "command": "npx",
-      "args": ["-y", "claude-code-mcp"],
-      "env": {
-        "ANTHROPIC_API_KEY": "sk-ant-xxxxx"
-      }
-    }
-  }
-}
+```bash
+# プロジェクトルートで実行
+claude mcp add --scope project claude-code-review -- npx -y claude-code-mcp
 ```
 
-> 💡 `ANTHROPIC_API_KEY` が環境変数で設定済みなら `env` ブロックは省略可能。
+APIキーを明示的に渡したい場合は `--env` を使う：
+
+```bash
+claude mcp add --scope project \
+  --env ANTHROPIC_API_KEY=sk-ant-xxxxx \
+  claude-code-review -- npx -y claude-code-mcp
+```
+
+> 💡 `ANTHROPIC_API_KEY` が環境変数に既に設定されていれば `--env` は不要。
 
 #### 方法B: 公式の `claude mcp serve` を使う
 
-Claude Code の公式機能。ファイル操作ツール（Bash, Read, Write, Edit, GrepTool等）をそのまま MCP で公開する。
+Claude Code のビルトイン機能。ファイル操作ツール（Bash, Read, Write, Edit, GrepTool等）をそのまま MCP で公開する。
 
-```json
-{
-  "mcpServers": {
-    "claude-code": {
-      "command": "claude",
-      "args": ["mcp", "serve"]
-    }
-  }
-}
+```bash
+# プロジェクトルートで実行
+claude mcp add --scope project claude-code-tools -- claude mcp serve
 ```
 
 #### 方法A と B の違い
@@ -167,15 +183,60 @@ Claude Code の公式機能。ファイル操作ツール（Bash, Read, Write, E
 
 **レビュー用途には方法A を推奨。**
 
-### 3.3 ステップ3: 動作確認
+#### 複雑な設定が必要な場合: `claude mcp add-json`
 
-Antigravity を再起動し、エージェントのチャットで以下のように試す。
+環境変数が多い場合など、JSON で直接渡す方が楽なケースもある：
+
+```bash
+claude mcp add-json claude-code-review '{
+  "command": "npx",
+  "args": ["-y", "claude-code-mcp"],
+  "env": {
+    "ANTHROPIC_API_KEY": "sk-ant-xxxxx",
+    "MAX_MCP_OUTPUT_TOKENS": "15000"
+  }
+}'
+```
+
+### 3.3 ステップ3: 登録の確認
+
+```bash
+# 登録済みサーバーの一覧を表示
+claude mcp list
+
+# 特定サーバーの接続テスト
+claude mcp get claude-code-review
+```
+
+正常に登録されていれば、以下のように表示される：
+
+```
+MCP Server Status
+
+• claude-code-review: connected
+```
+
+### 3.4 ステップ4: Antigravity 側での動作確認
+
+Antigravity を再起動し、エージェントのチャットで以下のように試す：
 
 ```
 Claude Code を使って、現在のディレクトリのファイル一覧を取得して
 ```
 
 エージェントが `claude_code` ツールを呼び出し、結果が返ってくれば成功。
+
+### 3.5 サーバーの削除・再登録
+
+設定を変更したい場合は、一度削除してから再登録する：
+
+```bash
+# 削除
+claude mcp remove claude-code-review
+
+# 再登録（設定を変更して）
+claude mcp add --scope project claude-code-review -- npx -y claude-code-mcp
+```
 
 ---
 
@@ -278,9 +339,10 @@ Antigravity から MCP ツール経由でレビュー依頼を受けた場合：
 ```markdown
 ## 8. MCP連携ルール
 
-- `.mcp.json` はプロジェクトルートに配置し、Gitで管理する
+- MCP サーバーの登録は `claude mcp add --scope project` を使い、`.mcp.json` 経由でチーム共有する
 - MCP サーバーの追加・変更は Issue を起票してから行う
 - MCP 経由の Claude Code 呼び出し結果は構造化データ（JSON等）で受け取ること
+- 登録状況の確認は `claude mcp list` で行う
 ```
 
 ---
@@ -338,10 +400,11 @@ claude_code ツール: "src/backend/ 配下の diff をレビューして..."
 | 症状 | 原因 | 対処法 |
 |------|------|--------|
 | `Command not found: claude` | Claude Code が未インストール or PATH が通っていない | `npm install -g @anthropic-ai/claude-code` を実行。`which claude` で確認 |
-| MCP サーバーが接続されない | `.mcp.json` の記述ミス or Antigravity の再起動忘れ | JSON構文を確認し、Antigravity を再起動 |
+| `claude mcp list` で表示されない | 登録時の `--scope` が違う or 登録失敗 | `claude mcp add` を再実行。`--scope project` ならリポルートの `.mcp.json` を確認 |
+| MCP サーバーが `disconnected` | npx のキャッシュ問題 or コマンドのパスが通っていない | `claude mcp remove <n>` → `claude mcp add` で再登録。`npx -y claude-code-mcp` が単独で動くか確認 |
 | `Permission denied` エラー | 初回の `--dangerously-skip-permissions` が未実行 | `claude --dangerously-skip-permissions` を一度実行 |
 | レビュー結果が途中で切れる | 出力トークン上限を超えている | `MAX_MCP_OUTPUT_TOKENS` を増やすか、レビュー範囲を分割 |
-| JSON パースエラー | デバッグログが JSON 出力に混入 | `MCP_CLAUDE_DEBUG=false` に設定 |
+| JSON パースエラー | デバッグログが JSON 出力に混入 | `claude mcp remove` → `--env MCP_CLAUDE_DEBUG=false` 付きで再登録 |
 | レビュー結果が不正確 | 入力が多すぎて焦点がぼけている | diff を機能単位に分割して渡す |
 
 ---
@@ -381,17 +444,17 @@ Claude Code は以下の2つの役割を同時に担える：
 
 以下を順番に実施し、全て完了したら移行完了とする。
 
-- [x] Node.js v20以上がインストールされている
-- [x] Claude Code がインストールされている（`claude --version` で確認）
-- [x] `claude --dangerously-skip-permissions` を一度実行済み
-- [x] `ANTHROPIC_API_KEY` が環境変数に設定されている
-- [x] プロジェクトルートに `.mcp.json` が作成されている
-- [x] Antigravity を再起動し、MCP サーバーが接続されている
-- [x] テストとしてClaude Code MCP ツールの呼び出しが成功している
-- [x] `.agents/rules/rules.md` のレビュー依頼セクションを更新済み
-- [x] （任意）`.claude/CLAUDE.md` にMCP対応の補足を追加済み
-- [x] （任意）`.ai-instructions.md` にMCP連携ルールを追記済み
-- [x] `.ai-context.md` に移行完了の記録を追加済み
+- [ ] Node.js v20以上がインストールされている
+- [ ] Claude Code がインストールされている（`claude --version` で確認）
+- [ ] `claude --dangerously-skip-permissions` を一度実行済み
+- [ ] `ANTHROPIC_API_KEY` が環境変数に設定されている
+- [ ] `claude mcp add` で MCP サーバーを登録済み
+- [ ] `claude mcp list` で `connected` になっている
+- [ ] Antigravity を再起動し、MCP ツールの呼び出しが成功している
+- [ ] `.agents/rules/rules.md` のレビュー依頼セクションを更新済み
+- [ ] （任意）`.claude/CLAUDE.md` にMCP対応の補足を追加済み
+- [ ] （任意）`.ai-instructions.md` にMCP連携ルールを追記済み
+- [ ] `.ai-context.md` に移行完了の記録を追加済み
 
 ---
 
