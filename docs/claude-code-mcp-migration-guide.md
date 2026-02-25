@@ -381,17 +381,17 @@ Claude Code は以下の2つの役割を同時に担える：
 
 以下を順番に実施し、全て完了したら移行完了とする。
 
-- [ ] Node.js v20以上がインストールされている
-- [ ] Claude Code がインストールされている（`claude --version` で確認）
-- [ ] `claude --dangerously-skip-permissions` を一度実行済み
-- [ ] `ANTHROPIC_API_KEY` が環境変数に設定されている
-- [ ] プロジェクトルートに `.mcp.json` が作成されている
-- [ ] Antigravity を再起動し、MCP サーバーが接続されている
-- [ ] テストとしてClaude Code MCP ツールの呼び出しが成功している
-- [ ] `.agents/rules/rules.md` のレビュー依頼セクションを更新済み
-- [ ] （任意）`.claude/CLAUDE.md` にMCP対応の補足を追加済み
-- [ ] （任意）`.ai-instructions.md` にMCP連携ルールを追記済み
-- [ ] `.ai-context.md` に移行完了の記録を追加済み
+- [x] Node.js v20以上がインストールされている
+- [x] Claude Code がインストールされている（`claude --version` で確認）
+- [x] `claude --dangerously-skip-permissions` を一度実行済み
+- [x] `ANTHROPIC_API_KEY` が環境変数に設定されている
+- [x] プロジェクトルートに `.mcp.json` が作成されている
+- [x] Antigravity を再起動し、MCP サーバーが接続されている
+- [x] テストとしてClaude Code MCP ツールの呼び出しが成功している
+- [x] `.agents/rules/rules.md` のレビュー依頼セクションを更新済み
+- [x] （任意）`.claude/CLAUDE.md` にMCP対応の補足を追加済み
+- [x] （任意）`.ai-instructions.md` にMCP連携ルールを追記済み
+- [x] `.ai-context.md` に移行完了の記録を追加済み
 
 ---
 
