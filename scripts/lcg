@@ -4,7 +4,9 @@ import sys
 import subprocess
 import re
 import tempfile
-
+import urllib.request
+import urllib.error
+import json
 
 def run_command(cmd, shell=False):
     if isinstance(cmd, str) and not shell:
@@ -51,26 +53,132 @@ def is_huge_diff(config):
     
     return total_diff > max_diff_warning
 
-def get_ai_lcg_mock(is_huge):
-    # Mocking AI response based on diff size (Huge diff = prioritize summary)
-    if is_huge:
-        return """
-Summary: 巨大な変更があったため要約を優先します。多数のファイルの追加変更が行われました。
-Quiz 1: 巨大なコミットを責務ごとに分割するための基準は何ですか？
-Quiz 2: この変更による影響範囲を抑えるために、CIでどのテストが重要になりますか？
-Explore next: 巨大なPRを避けるための設計の分割方法について
-"""
-    else:
-        return """
-Summary: 設定ファイルの追加とLCGワークフローの骨格が整備されました。
-Deep Dive:
-- `.github/workflows/lcg.yml`: OSのフィーチャーフラグに基づいて動作を切り替える設計パターンです。
-Quiz 1: `features.lcg` が `false` の場合にワークフローがスキップされる仕組みはどのように実装されていますか？
-Quiz 2: Github Actions における `contents: write` 権限の用途は何ですか？
-Explore next: AIがソースコードをコンテキスト付きで解釈するための最適なプロンプト設計について
+def get_diff_text():
+    # 1. ワークスペース上で現在の PR を取得 (gh pr view)
+    pr_number = None
+    github_ref = os.environ.get("GITHUB_REF", "")
+    if github_ref.startswith("refs/pull/"):
+        pr_number = github_ref.split("/")[2]
+        
+    if not pr_number:
+        res = run_command("gh pr view --json number -q .number")
+        if res.returncode == 0:
+            pr_number = res.stdout.strip()
+            
+    if pr_number:
+        res = run_command(f"gh pr diff {pr_number}")
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout
+            
+    # 2. PRが取得できなければローカルの origin/mainからの差分
+    res = run_command("git diff origin/main...HEAD")
+    if res.returncode == 0 and res.stdout.strip():
+        return res.stdout
+        
+    # 3. それでも無ければ現在のワーキングツリーの差分
+    res = run_command("git diff HEAD")
+    if res.returncode == 0:
+        return res.stdout
+        
+    return ""
+
+def get_ai_review(is_huge):
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("GEMINI_API_KEY is not set. Using mock response for local testing.")
+        return get_ai_lcg_mock(is_huge)
+        
+    diff_text = get_diff_text()
+    if not diff_text.strip():
+        print("No diff found. Skipping LCG generation.")
+        sys.exit(0)
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    
+    prompt = f"""
+あなたは強力な技術メンターです。以下のコード差分をレビューし、プロジェクトのメンバーに向けた教育的な解説（Learning Content）をJSON形式で提供してください。
+巨大な差分がある場合は、個別のコードより全体設計や影響範囲に関する解説を優先してください（is_huge: {is_huge}）。
+
+JSON形式のスキーマは以下の通りです。JSON以外は出力しないでください。
+
+```json
+{{
+  "Summary": "変更内容の全体的な要約",
+  "Deep Dive": [
+    "注目すべき設計パターン、アーキテクチャ上の決定事項、または重要なコード片の解説1",
+    "解説2..."
+  ],
+  "Quiz": [
+    "この変更から学べる理解度確認用の質問（コードの意図や技術背景について）1",
+    "質問2..."
+  ],
+  "Explore next": "さらに学習を深めるためのトピックや次に見るべきソースコード領域のアドバイス"
+}}
+```
+
+Diff:
+```diff
+{diff_text}
+```
 """
 
-def parse_ai_response(response_text):
+    data = {"contents": [{"parts": [{"text": prompt}]}]}
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(data).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            text = text.strip()
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            text = text.strip()
+            return json.loads(text)
+    except urllib.error.URLError as e:
+        print(f"Failed to call Gemini API: {e}")
+        if hasattr(e, 'read'):
+            print(e.read().decode('utf-8'))
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse JSON from Gemini API: {e}")
+        sys.exit(1)
+
+def get_ai_lcg_mock(is_huge):
+    # APIキーがない場合のフォールバックモック
+    if is_huge:
+        return {
+            "Summary": "巨大な変更があったため要約を優先します。多数のファイルの追加変更が行われました。",
+            "Deep Dive": [
+                "巨大なコミットはレビューの負荷を高めます。ドメイン境界で機能分割を検討してください。"
+            ],
+            "Quiz": [
+                "巨大なコミットを責務ごとに分割するための基準は何ですか？",
+                "この変更による影響範囲を抑えるために、CIでどのテストが重要になりますか？"
+            ],
+            "Explore next": "巨大なPRを避けるための設計の分割方法について"
+        }
+    else:
+        return {
+            "Summary": "設定ファイルの追加とLCGワークフローの骨格が整備されました。",
+            "Deep Dive": [
+                "`.github/workflows/lcg.yml`: OSのフィーチャーフラグに基づいて動作を切り替える設計パターンです。"
+            ],
+            "Quiz": [
+                "`features.lcg` が `false` の場合にワークフローがスキップされる仕組みはどのように実装されていますか？",
+                "Github Actions における `contents: write` 権限の用途は何ですか？"
+            ],
+            "Explore next": "AIがソースコードをコンテキスト付きで解釈するための最適なプロンプト設計について"
+        }
+
+def parse_ai_response(response_data):
     data = {
         "Summary": "",
         "Deep Dive": [],
@@ -78,36 +186,13 @@ def parse_ai_response(response_text):
         "Explore next": ""
     }
     
-    # 簡易パース処理
-    lines = response_text.strip().split('\n')
-    current_section = None
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        if line.startswith("Summary:"):
-            current_section = "Summary"
-            data["Summary"] = line.replace("Summary:", "").strip()
-        elif line.startswith("Deep Dive:"):
-            current_section = "Deep Dive"
-        elif line.startswith(("-", "*", "•")) and current_section == "Deep Dive":
-            data["Deep Dive"].append(line.lstrip("-*• ").strip())
-        elif line.startswith("Quiz"):
-            current_section = "Quiz"
-            q_match = re.search(r'Quiz \d+:(.*)', line)
-            if q_match:
-                 data["Quiz"].append(q_match.group(1).strip())
-        elif line.startswith("Explore next:"):
-            current_section = "Explore next"
-            data["Explore next"] = line.replace("Explore next:", "").strip()
-        else:
-            if current_section == "Summary":
-                data["Summary"] += "\n" + line
-            elif current_section == "Explore next":
-                 data["Explore next"] += "\n" + line
-                 
+    if isinstance(response_data, dict):
+        for key in data.keys():
+            if key in response_data:
+                data[key] = response_data[key]
+            elif key.lower() in response_data:
+                data[key] = response_data[key.lower()]
+                
     return data
 
 def format_pr_comment(parsed_data):
@@ -206,8 +291,8 @@ def main():
     config = get_config()
     huge_diff = is_huge_diff(config)
     
-    # Get mock AI output
-    ai_output = get_ai_lcg_mock(huge_diff)
+    # Get real AI output or mock fallback
+    ai_output = get_ai_review(huge_diff)
     
     # Parse output
     parsed_data = parse_ai_response(ai_output)
