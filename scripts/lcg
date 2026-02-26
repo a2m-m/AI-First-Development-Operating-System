@@ -29,11 +29,6 @@ def get_pr_number():
 def get_diff_text():
     # 1. ワークスペース上で現在の PR を取得 (gh pr view)
     pr_number = get_pr_number()
-        
-    if not pr_number:
-        res = run_command("gh pr view --json number -q .number")
-        if res.returncode == 0:
-            pr_number = res.stdout.strip()
             
     if pr_number:
         res = run_command(f"gh pr diff {pr_number}")
@@ -75,7 +70,7 @@ def get_config():
 def is_huge_diff(config, diff_text):
     max_diff_warning = config.get('policy', {}).get('max_diff_warning', 1200)
     
-    lines_changed = len(diff_text.splitlines())
+    lines_changed = len([l for l in diff_text.splitlines() if l.startswith(('+', '-')) and not l.startswith(('+++', '---'))])
     print(f"Diff size: {lines_changed} lines (Threshold: {max_diff_warning})")
     
     return lines_changed > max_diff_warning
@@ -115,13 +110,15 @@ def generate_learning_content(is_huge, diff_text):
         print("No diff found. Skipping AI content generation.")
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
     
     huge_instruction = ""
     if is_huge:
         huge_instruction = "今回の変更は非常に大きいため、要約（Summary）を特に重視し、その他の項目は簡潔にまとめてください。\n"
         if len(diff_text) > 50000:
             diff_text = diff_text[:50000] + "\n... (Diff truncated due to size limit)"
+
+    safe_diff_text = diff_text.replace("```", "\\`\\`\\`")
 
     prompt = f"""
 あなたは優秀なプログラミング講師です。以下のコード差分を解析し、学習コンテンツをJSON形式で生成してください。
@@ -141,7 +138,7 @@ def generate_learning_content(is_huge, diff_text):
 
 Diff:
 ```diff
-{diff_text}
+{safe_diff_text}
 ```
 """
 
@@ -149,7 +146,10 @@ Diff:
     req = urllib.request.Request(
         url,
         data=json.dumps(data).encode("utf-8"),
-        headers={"Content-Type": "application/json"}
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key
+        }
     )
     
     try:
