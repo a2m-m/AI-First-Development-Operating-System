@@ -7,7 +7,6 @@ import tempfile
 import urllib.request
 import urllib.error
 import json
-import socket
 from datetime import datetime
 
 
@@ -75,11 +74,14 @@ def is_huge_diff(config, diff_text):
     
     return lines_changed > max_diff_warning
 
-def get_ai_lcg_mock(is_huge):
+def get_ai_lcg_mock(is_huge, diff_text=""):
+    files_changed = re.findall(r'^diff --git a/(.*?) b/', diff_text, re.MULTILINE)
+    file_info = f" ({', '.join(files_changed[:3])} 等)" if files_changed else ""
+    
     # Mocking AI response mapping to the expected dict
     if is_huge:
         return {
-            "Summary": "巨大な変更があったため要約を優先します。多数のファイルの追加変更が行われました。",
+            "Summary": f"巨大な変更があったため要約を優先します。多数のファイルの追加変更が行われました。{file_info}",
             "Deep Dive": [],
             "Quiz": [
                 "巨大なコミットを責務ごとに分割するための基準は何ですか？",
@@ -89,7 +91,7 @@ def get_ai_lcg_mock(is_huge):
         }
     else:
         return {
-            "Summary": "設定ファイルの追加とLCGワークフローの骨格が整備されました。",
+            "Summary": f"設定ファイルの追加とLCGワークフローの骨格が整備されました。{file_info}",
             "Deep Dive": [
                 "`.github/workflows/lcg.yml`: OSのフィーチャーフラグに基づいて動作を切り替える設計パターンです。"
             ],
@@ -104,7 +106,7 @@ def generate_learning_content(is_huge, diff_text):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY is not set. Using mock for local testing.")
-        return get_ai_lcg_mock(is_huge)
+        return get_ai_lcg_mock(is_huge, diff_text)
 
     if not diff_text.strip():
         print("No diff found. Skipping AI content generation.")
@@ -117,9 +119,9 @@ def generate_learning_content(is_huge, diff_text):
         huge_instruction = "今回の変更は非常に大きいため、要約（Summary）を特に重視し、その他の項目は簡潔にまとめてください。\n"
         
     if len(diff_text) > 40000:
-        diff_text = diff_text[:40000] + "\n... (Diff truncated due to size limit)"
+        diff_text = diff_text[:40000].rsplit('\n', 1)[0] + "\n... (Diff truncated due to size limit)"
 
-    safe_diff_text = diff_text.replace("```", "\\`\\`\\`")
+    safe_diff_text = diff_text.replace("```", "\\`\\`\\`").replace("</diff>", "<\\/diff>")
 
     prompt = f"""
 あなたは優秀なプログラミング講師です。以下のコード差分を解析し、学習コンテンツをJSON形式で生成してください。
@@ -161,21 +163,25 @@ def generate_learning_content(is_huge, diff_text):
                 text = result["candidates"][0]["content"]["parts"][0]["text"]
             except (KeyError, IndexError, TypeError) as e:
                 print(f"Failed to extract text from Gemini response structure: {result}")
-                return get_ai_lcg_mock(is_huge)
+                return get_ai_lcg_mock(is_huge, diff_text)
                 
             text = text.strip()
-            match = re.search(r'\{[\s\S]*\}', text)
-            if match:
-                text = match.group(0)
+            block_match = re.search(r'```json\n(.*?)\n```', text, re.DOTALL)
+            if block_match:
+                text = block_match.group(1).strip()
+            else:
+                match = re.search(r'\{[\s\S]*?\}', text)
+                if match:
+                    text = match.group(0)
             return json.loads(text)
     except urllib.error.HTTPError as e:
         print(f"HTTP {e.code}: {e.reason}\n{e.read().decode('utf-8')}")
-        return get_ai_lcg_mock(is_huge)
+        return get_ai_lcg_mock(is_huge, diff_text)
     except Exception as e:
         print(f"Failed to call Gemini API or parse response: {e}")
         if hasattr(e, 'read'):
             print(e.read().decode('utf-8'))
-        return get_ai_lcg_mock(is_huge)
+        return get_ai_lcg_mock(is_huge, diff_text)
 
 def parse_ai_response(response_data):
     data = {
