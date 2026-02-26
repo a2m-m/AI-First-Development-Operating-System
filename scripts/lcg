@@ -21,17 +21,18 @@ def get_pr_number():
     if github_ref.startswith("refs/pull/"):
         return github_ref.split("/")[2]
         
-    res = run_command("gh pr view --json number -q .number")
+    res = run_command(["gh", "pr", "view", "--json", "number", "-q", ".number"])
     if res.returncode == 0:
         return res.stdout.strip()
     return None
 
-def get_diff_text():
+def get_diff_text(pr_number=None):
     # 1. ワークスペース上で現在の PR を取得 (gh pr view)
-    pr_number = get_pr_number()
+    if not pr_number:
+        pr_number = get_pr_number()
             
     if pr_number:
-        res = run_command(f"gh pr diff {pr_number}")
+        res = run_command(["gh", "pr", "diff", str(pr_number)])
         if res.returncode == 0 and res.stdout.strip():
             return res.stdout
         else:
@@ -40,14 +41,14 @@ def get_diff_text():
         print("Fallback: get_diff_text could not determine PR number.")
             
     # 2. PRが取得できなければローカルの origin/mainからの差分
-    res = run_command("git diff origin/main...HEAD")
+    res = run_command(["git", "diff", "origin/main...HEAD"])
     if res.returncode == 0 and res.stdout.strip():
         return res.stdout
     else:
         print("Fallback: get_diff_text 'git diff origin/main...HEAD' failed or empty.")
         
     # 3. それでも無ければ現在のワーキングツリーの差分
-    res = run_command("git diff HEAD")
+    res = run_command(["git", "diff", "HEAD"])
     if res.returncode == 0 and res.stdout.strip():
         return res.stdout
     else:
@@ -115,8 +116,9 @@ def generate_learning_content(is_huge, diff_text):
     huge_instruction = ""
     if is_huge:
         huge_instruction = "今回の変更は非常に大きいため、要約（Summary）を特に重視し、その他の項目は簡潔にまとめてください。\n"
-        if len(diff_text) > 50000:
-            diff_text = diff_text[:50000] + "\n... (Diff truncated due to size limit)"
+        
+    if len(diff_text) > 40000:
+        diff_text = diff_text[:40000] + "\n... (Diff truncated due to size limit)"
 
     safe_diff_text = diff_text.replace("```", "\\`\\`\\`")
 
@@ -162,13 +164,9 @@ Diff:
                 return get_ai_lcg_mock(is_huge)
                 
             text = text.strip()
-            if text.startswith("```json"):
-                text = text[7:]
-            if text.startswith("```"):
-                text = text[3:]
-            if text.endswith("```"):
-                text = text[:-3]
-            text = text.strip()
+            match = re.search(r'\{[\s\S]*\}', text)
+            if match:
+                text = match.group(0)
             return json.loads(text)
     except urllib.error.HTTPError as e:
         print(f"HTTP {e.code}: {e.reason}\n{e.read().decode('utf-8')}")
@@ -265,12 +263,12 @@ def commit_asset(doc_content, hash_val):
     
     # Configure git inside GH actions
     if os.environ.get("GITHUB_ACTIONS") == "true":
-         run_command('git config user.name "github-actions[bot]"')
-         run_command('git config user.email "github-actions[bot]@users.noreply.github.com"')
+         run_command(["git", "config", "user.name", "github-actions[bot]"])
+         run_command(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"])
     
     # Commit and push
-    run_command(f'git add {filename}')
-    res_commit = run_command(f'git commit -m "docs: auto-generate learning content for {hash_val}"')
+    run_command(["git", "add", filename])
+    res_commit = run_command(["git", "commit", "-m", f"docs: auto-generate learning content for {hash_val}"])
     
     if res_commit.returncode == 0:
         print("Committed learning material successfully.")
@@ -281,20 +279,21 @@ def commit_asset(doc_content, hash_val):
         if github_head_ref:
             push_ref = f"HEAD:refs/heads/{github_head_ref}"
             
-        res_push = run_command(f'git push origin {push_ref}')
+        res_push = run_command(["git", "push", "origin", push_ref])
         if res_push.returncode != 0:
             print(f"Warning: Push failed. Might need to adjust branch protection. {res_push.stderr}")
         else:
             print("Pushed learning material successfully.")
     else:
-        print("Nothing to commit for learning material (file might already exist and is unchanged).")
+        print(f"Commit skipped or failed: {res_commit.stderr.strip() or 'no changes to commit'}")
 
 def main():
     gh_token = os.environ.get("GITHUB_TOKEN")
     if not gh_token:
         print("GITHUB_TOKEN is not set. Assuming local test run.")
         
-    diff_text = get_diff_text()
+    pr_number = get_pr_number()
+    diff_text = get_diff_text(pr_number)
     
     config = get_config()
     huge_diff = is_huge_diff(config, diff_text)
@@ -315,8 +314,6 @@ def main():
     print("----------------------")
     
     if gh_token:
-        pr_number = get_pr_number()
-                
         if pr_number:
             fd, tmp_path = tempfile.mkstemp(suffix=".md")
             with os.fdopen(fd, "w") as f:
@@ -334,7 +331,7 @@ def main():
             print("Could not determine PR number. Skipping PR comment posting.")
 
     # Save and commit Long Form Doc
-    res_hash = run_command("git rev-parse --short HEAD")
+    res_hash = run_command(["git", "rev-parse", "--short", "HEAD"])
     hash_val = res_hash.stdout.strip() if res_hash.returncode == 0 else "unknown"
     
     doc_body = format_asset_doc(parsed_data, hash_val)
