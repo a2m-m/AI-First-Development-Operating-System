@@ -74,6 +74,7 @@ class TestConfig(unittest.TestCase):
             cfg = config.load_config(real_path)
             self.assertEqual(cfg['project']['name'], 'YOUR_PROJECT_NAME')
             self.assertEqual(cfg['runtime']['mode'], 'docker')
+            self.assertEqual(cfg['runtime']['docker_image'], 'alpine')
             self.assertEqual(cfg['commands']['lint'], "echo 'skip'")
             self.assertEqual(cfg['policy']['max_diff_warning'], 1200)
 

@@ -65,6 +65,8 @@ def get_config():
         config = {'policy': {'max_diff_warning': 1200}}
         
     return config
+
+
 def is_huge_diff(config, diff_text):
     max_diff_warning = config.get('policy', {}).get('max_diff_warning', 1200)
     

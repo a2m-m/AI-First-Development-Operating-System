@@ -7,18 +7,6 @@ import urllib.request
 import urllib.error
 import json
 
-def get_config():
-    # Attempt to load the python config module
-    try:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
-        import config as custom_config
-        config = custom_config.load_config('os-template.yml')
-    except Exception as e:
-        print(f"Warning: Failed to parse os-template.yml using config.py: {e}")
-        config = {}
-        
-    return config
-
 def run_command(cmd, shell=False):
     if isinstance(cmd, str) and not shell:
         import shlex
