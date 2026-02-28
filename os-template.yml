@@ -26,7 +26,7 @@ project:
 # ---------------------------------------------------------------------------
 runtime:
   mode: "docker"                      # "docker" | "host"
-  docker_image: "alpine"  # TODO: 必須（mode=docker の場合） — イメージを指定する (例: "your-image:tag")
+  docker_image: "alpine"              # TODO: 必須（mode=docker の場合） — イメージを指定する (例: "your-image:tag")
   host_setup_steps: []                # mode=host の場合推奨 (例: ["python -m venv .venv", "pip install -r requirements.txt"])
 
 # ---------------------------------------------------------------------------

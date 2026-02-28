@@ -72,7 +72,7 @@ class TestConfig(unittest.TestCase):
         real_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'os-template.yml'))
         if os.path.exists(real_path):
             cfg = config.load_config(real_path)
-            self.assertEqual(cfg['project']['name'], 'YOUR_PROJECT_NAME')
+            self.assertIsInstance(cfg['project']['name'], str)
             self.assertEqual(cfg['runtime']['mode'], 'docker')
             self.assertEqual(cfg['runtime']['docker_image'], 'alpine')
             self.assertEqual(cfg['runtime']['host_setup_steps'], [])

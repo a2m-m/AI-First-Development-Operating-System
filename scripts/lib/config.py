@@ -5,17 +5,18 @@ import json
 
 try:
     import yaml
+    HAS_YAML = True
 except ImportError:
-    # Gracefully handle missing pyyaml to prevent silent failures in bash scripts like run
-    print("Warning: pyyaml is not installed. Run 'pip install pyyaml' or check requirements.txt.", file=sys.stderr)
-    print("") # Ensure empty string is outputted to bash, as expected by caller
-    sys.exit(0) # Exit 0 so bash evaluation doesn't fail but just receives empty string
-
+    HAS_YAML = False
+    
 def load_config(filepath):
     """
     Loads and returns the parsed contents of a YAML file as a dict.
     """
     config = {}
+    
+    if not HAS_YAML:
+        return config
     
     if not os.path.exists(filepath):
         return config
@@ -47,6 +48,11 @@ def get_value(filepath, key_path):
     return current
 
 if __name__ == "__main__":
+    if not HAS_YAML:
+        print("Warning: pyyaml is not installed. Run 'pip install pyyaml' or check requirements.txt.", file=sys.stderr)
+        print("")
+        sys.exit(0)
+
     if len(sys.argv) != 3:
         print("Usage: python3 config.py <path_to_yaml> <key_path>", file=sys.stderr)
         sys.exit(1)
