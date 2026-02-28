@@ -19,9 +19,9 @@ fi
 
 # 2. Check for huge diffs
 if [ -f "$REPO_ROOT/os-template.yml" ]; then
-    # Simple extraction using grep (with fallback defaults)
-    MAX_DIFF=$(grep -E '^\s*max_diff_warning:' "$REPO_ROOT/os-template.yml" | awk -F':' '{print $2}' | awk '{print $1}')
-    MAX_FILE=$(grep -E '^\s*max_file_warning:' "$REPO_ROOT/os-template.yml" | awk -F':' '{print $2}' | awk '{print $1}')
+    # Simple extraction using python script
+    MAX_DIFF=$(python3 "$REPO_ROOT/scripts/lib/config.py" "$REPO_ROOT/os-template.yml" policy.max_diff_warning)
+    MAX_FILE=$(python3 "$REPO_ROOT/scripts/lib/config.py" "$REPO_ROOT/os-template.yml" policy.max_file_warning)
 
     MAX_DIFF=${MAX_DIFF:-1200}
     MAX_FILE=${MAX_FILE:-30}

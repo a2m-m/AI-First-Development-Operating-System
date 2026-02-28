@@ -18,38 +18,7 @@ CONFIG_FILE="${ROOT_DIR}/os-template.yml"
 # -----------------------------------------------------------------------------
 get_yaml_value() {
     local key_path="$1"
-    python3 -c '
-import sys, re, json
-def get_val(file, path):
-    parts = path.split(".")
-    if len(parts) != 2:
-        return
-    section, key = parts
-    in_section = False
-    with open(file, "r") as f:
-        for line in f:
-            if re.match(r"^\s*#", line): continue
-            if line.startswith(f"{section}:"):
-                in_section = True; continue
-            if in_section and re.match(r"^[a-zA-Z0-9_-]+:", line):
-                in_section = False
-            if in_section:
-                m = re.match(r"^\s+" + re.escape(key) + r":\s*(.*)$", line)
-                if m:
-                    val = m.group(1).strip()
-                    if val.startswith("\""):
-                        end_idx = val.find("\"", 1)
-                        if end_idx != -1: val = val[1:end_idx]
-                    elif val.startswith("\x27"):
-                        end_idx = val.find("\x27", 1)
-                        if end_idx != -1: val = val[1:end_idx]
-                    else:
-                        val = val.split(" #")[0].strip()
-                    print(val)
-                    return
-    print("")
-get_val(sys.argv[1], sys.argv[2])
-' "${CONFIG_FILE}" "${key_path}"
+    python3 "${ROOT_DIR}/scripts/lib/config.py" "${CONFIG_FILE}" "${key_path}"
 }
 
 # -----------------------------------------------------------------------------
