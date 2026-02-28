@@ -88,15 +88,20 @@ Diff:
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode("utf-8"))
             text = result["candidates"][0]["content"]["parts"][0]["text"]
-            # LLM may wrap JSON in markdown block like ```json ... ```
+            
+            # Print raw AI output to logs for debugging (only in Actions where things are quiet otherwise)
+            if os.environ.get("GITHUB_ACTIONS") == "true":
+                print(f"Raw AI Output: {text}")
+                
             text = text.strip()
-            if text.startswith("```json"):
-                text = text[7:]
-            if text.startswith("```"):
-                text = text[3:]
-            if text.endswith("```"):
-                text = text[:-3]
-            text = text.strip()
+            block_match = re.search(r'```json\n(.*?)\n```', text, re.DOTALL)
+            if block_match:
+                text = block_match.group(1).strip()
+            else:
+                match = re.search(r'\{[\s\S]*?\}', text)
+                if match:
+                    text = match.group(0)
+                    
             return json.loads(text)
     except urllib.error.URLError as e:
         print(f"Failed to call Gemini API: {e}")
@@ -109,7 +114,7 @@ Diff:
         sys.exit(1)
 
 def parse_ai_response(response_data):
-    # This function is now just ensuring default values since response_data is expected to be a dict
+    # This function is now just ensuring default values since response_data is expected to be a dict or list of dicts
     data = {
         "Severity": "LOW",
         "Finding": "",
@@ -118,6 +123,10 @@ def parse_ai_response(response_data):
         "Example": "",
         "Learn more": ""
     }
+    
+    # If Gemini returns a list containing the dict, extract it
+    if isinstance(response_data, list) and len(response_data) > 0:
+        response_data = response_data[0]
     
     if isinstance(response_data, dict):
         for key in data.keys():
