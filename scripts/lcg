@@ -80,8 +80,16 @@ def get_ai_lcg_mock(is_huge, diff_text=""):
     
     topic_mock = "misc-updates"
     if files_changed:
-        first_file = files_changed[0].split('/')[-1].replace('.', '-')
-        topic_mock = f"update-{first_file}"
+        first_file_name_with_ext = files_changed[0].split('/')[-1]
+        # 拡張子を除去 (例: "my_module.py" -> "my_module", "LICENSE" -> "LICENSE")
+        filename_base = first_file_name_with_ext.rsplit('.', 1)[0] \
+                        if '.' in first_file_name_with_ext else first_file_name_with_ext
+        
+        # 不適切な文字をハイフンに置換し、小文字化
+        clean_filename = re.sub(r'[^a-zA-Z0-9-]', '-', filename_base).strip('-').lower()
+        
+        # 生成されたトピックが空でなければ使用、そうでなければデフォルト
+        topic_mock = f"update-{clean_filename}" if clean_filename else "misc-updates"
 
     # Mocking AI response mapping to the expected dict
     if is_huge:
