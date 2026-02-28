@@ -78,9 +78,15 @@ def get_ai_lcg_mock(is_huge, diff_text=""):
     files_changed = re.findall(r'^diff --git a/(.*?) b/', diff_text, re.MULTILINE)
     file_info = f" ({', '.join(files_changed[:3])} 等)" if files_changed else ""
     
+    topic_mock = "misc-updates"
+    if files_changed:
+        first_file = files_changed[0].split('/')[-1].replace('.', '-')
+        topic_mock = f"update-{first_file}"
+
     # Mocking AI response mapping to the expected dict
     if is_huge:
         return {
+            "Topic": "large-refactor",
             "Summary": f"巨大な変更があったため要約を優先します。多数のファイルの追加変更が行われました。{file_info}",
             "Deep Dive": [],
             "Quiz": [
@@ -91,6 +97,7 @@ def get_ai_lcg_mock(is_huge, diff_text=""):
         }
     else:
         return {
+            "Topic": topic_mock,
             "Summary": f"設定ファイルの追加とLCGワークフローの骨格が整備されました。{file_info}",
             "Deep Dive": [
                 "`.github/workflows/lcg.yml`: OSのフィーチャーフラグに基づいて動作を切り替える設計パターンです。"
@@ -134,6 +141,7 @@ def generate_learning_content(is_huge, diff_text):
 
 ```json
 {{
+  "Topic": "変更内容を表す短い英語のケバブケース文字列 (例: add-user-auth, fix-db-connection, etc.)",
   "Summary": "変更の全体的な要約",
   "Deep Dive": ["詳細な技術的解説1", "詳細な技術的解説2"],
   "Quiz": ["変更内容に関する理解度確認クイズ1", "理解度確認クイズ2"],
@@ -185,6 +193,7 @@ def generate_learning_content(is_huge, diff_text):
 
 def parse_ai_response(response_data):
     data = {
+        "Topic": "misc-updates",
         "Summary": "",
         "Deep Dive": [],
         "Quiz": [],
@@ -197,7 +206,7 @@ def parse_ai_response(response_data):
             if val is None:
                 val = response_data.get(key.lower())
             
-            if key in ["Summary", "Explore next"]:
+            if key in ["Topic", "Summary", "Explore next"]:
                 if isinstance(val, str):
                     data[key] = val
                 elif val is not None:
@@ -234,6 +243,9 @@ def format_asset_doc(parsed_data, context_name):
     # 資産化用のLong Form (Deep Dive含む)
     doc = f"# Learning Content: {context_name}\n\n"
     
+    topic = parsed_data.get("Topic", "misc-updates")
+    doc += f"**Topic**: {topic}\n\n"
+
     if parsed_data.get("Summary"):
         doc += f"## Summary\n{parsed_data['Summary']}\n\n"
         
@@ -254,14 +266,23 @@ def format_asset_doc(parsed_data, context_name):
         
     return doc
 
-def commit_asset(doc_content, hash_val):
+def commit_asset(doc_content, context_prefix, topic, hash_val):
+    # Sanitize topic for filename (allow alphanumeric and hyphens)
+    safe_topic = re.sub(r'[^a-zA-Z0-9-]', '-', topic).strip('-').lower()
+    safe_topic = safe_topic[:50].strip('-')
+    if not safe_topic:
+        safe_topic = "misc-updates"
+        
+    date_str = datetime.now().strftime('%Y-%m-%d')
+    filename_base = f"{date_str}-{context_prefix}-{safe_topic}-{hash_val}.md"
+    
     asset_dir = "docs/learning/commits"
     if not os.path.exists(asset_dir):
         # Spec says create docs/learning/commits/, trigger on existing .gitkeep, 
         # but let's just make sure it creates it and commits.
         os.makedirs(asset_dir, exist_ok=True)
         
-    filename = f"{asset_dir}/{hash_val}.md"
+    filename = f"{asset_dir}/{filename_base}"
     with open(filename, "w") as f:
         f.write(doc_content)
         
@@ -274,7 +295,7 @@ def commit_asset(doc_content, hash_val):
     
     # Commit and push
     run_command(["git", "add", filename])
-    res_commit = run_command(["git", "commit", "-m", f"docs: auto-generate learning content for {hash_val}"])
+    res_commit = run_command(["git", "commit", "-m", f"docs: auto-generate learning content for {context_prefix} ({topic})"])
     
     if res_commit.returncode == 0:
         print("Committed learning material successfully.")
@@ -341,8 +362,11 @@ def main():
     hash_val = res_hash.stdout.strip() if res_hash.returncode == 0 else f"unknown-{datetime.now().strftime('%Y%m%d%H%M%S')}"
     
     context_name = f"PR #{pr_number}" if pr_number else f"Commit {hash_val}"
+    context_prefix = f"PR-{pr_number}" if pr_number else f"Commit-{hash_val}"
     doc_body = format_asset_doc(parsed_data, context_name)
-    commit_asset(doc_body, hash_val)
+    
+    topic = parsed_data.get("Topic", "misc-updates")
+    commit_asset(doc_body, context_prefix, topic, hash_val)
     
     sys.exit(0)
 
