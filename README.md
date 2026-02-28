@@ -156,6 +156,15 @@ policy:
 | `./scripts/run doctor` | 設定不足・環境不足の診断 |
 | `./scripts/run print-config` | 最終的に解釈された設定を表示 |
 
+### 3.3 Claude Code Guardrails
+
+OS では Claude Code 向けに `PreToolUse` フック (`.claude/hooks/guardrail.py`) を提供し、以下のセキュリティ強制（ガードレール）を行っている。
+
+- **機密ファイルへのアクセス遮断**：`.env`、`credentials` 等のシークレットファイルに対する読み書き（`Read`/`Write`/`Edit`/`Glob` ツール、および `Bash` コマンドからのアクセス）を強制的 (Exit 2) にブロックする。
+- **外部通信への警告**：`curl` や `wget` 等による外部へのネットワークリクエスト実行時に警告を発出する。
+
+この設定は `.claude/settings.json` により制御されており、AIエージェントが意図せず機密情報を読み取ったり変更したりするリスクを軽減している。
+
 ---
 
 ## 4. Day-1 Flow
