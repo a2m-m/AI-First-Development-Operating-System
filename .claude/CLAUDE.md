@@ -59,16 +59,6 @@
 
 ---
 
-## ルール更新プロトコル
-
-「ルールに追加して」等の指示を受けた場合：
-
-- **編集してよい**: `.ai-instructions.md`（共通）、`.claude/CLAUDE.md`（自分）
-- **絶対に編集しない**: `.agents/rules/rules.md`（Antigravity固有）
-- Antigravity向けの内容だった場合 → 「これはAntigravity側のルールです」とユーザーに伝える
-
----
-
 ## AntigravityからのJSON出力レビュー依頼への対応
 
 Antigravity からターミナル（`claude -p`）経由でレビュー依頼を受けた場合：
