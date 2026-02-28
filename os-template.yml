@@ -26,7 +26,7 @@ project:
 # ---------------------------------------------------------------------------
 runtime:
   mode: "docker"                      # "docker" | "host"
-  docker_image: "alpine"              # TODO: 必須（mode=docker の場合） — イメージを指定する (例: "your-image:tag")
+  docker_image: "python:3.12-alpine"  # TODO: 必須（mode=docker の場合） — イメージを指定する (例: "your-image:tag")
   host_setup_steps: []                # mode=host の場合推奨 (例: ["python -m venv .venv", "pip install -r requirements.txt"])
 
 # ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ commands:
   format: ""                          # optional: フォーマッタ (例: "black ." / "prettier --write .")
   lint: "echo 'skip'"                 # TODO: 必須 — lint コマンドを設定する (例: "flake8" / "eslint ."）（スキップする場合は "echo 'skip'" と理由コメントを記載）
   typecheck: ""                       # optional: 型チェック (例: "mypy ." / "tsc --noEmit")。未使用なら空でOK
-  test: "echo 'skip'"                 # TODO: 必須 — テストコマンドを設定する (例: "pytest" / "npm test")
+  test: "python3 -m unittest discover -v -s scripts -p '*test*.py'" # TODO: 必須 — テストコマンドを設定する (例: "pytest" / "npm test")
   build: ""                           # optional: ビルド (例: "docker build ." / "npm run build")
   ci: ""                              # optional: 明示したい場合。空なら run が lint → typecheck → test を順に実行
 
