@@ -6,7 +6,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "python3 .claude/hooks/guardrail.py; code=$?; [ $code -eq 2 ] && exit 2; exit 0"
+                        "command": "python3 .claude/hooks/guardrail.py"
                     }
                 ]
             }
