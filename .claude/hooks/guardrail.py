@@ -26,7 +26,7 @@ def main():
             r'/\.env$',          # path/.env
             r'/\.env\..*$',      # path/.env.test
             r'credentials.*',    # credentials.json, etc
-            r'.*secret.*'        # dummy_secret.txt, etc
+            r'(^|/)secret[^/]*$', # secret.txt, secrets.json (ファイル名がsecretで始まる場合のみ)
         ]
         
         is_secret = False
