@@ -18,7 +18,7 @@ runtime:
   docker_image: ""
 """
 
-MOCK_README = """# AI-First Development Operating System
+MOCK_README = """# Diffairy
 
 > **YOUR_PROJECT_NAME** — YOUR_TEAM_OR_OWNER
 

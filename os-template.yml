@@ -17,9 +17,9 @@ schema_version: "1"
 # project: プロジェクト識別情報
 # ---------------------------------------------------------------------------
 project:
-  name: "YOUR_PROJECT_NAME"           # TODO: プロジェクト名に置き換える
-  owner: "YOUR_TEAM_OR_OWNER"         # TODO: チーム名/オーナーに置き換える
-  description: ""                     # TODO: プロジェクトの説明を記入する
+  name: "Diffairy"
+  owner: "a2m-m"
+  description: "AIがファイルの差分を日本語で解説・通知する macOS ネイティブアプリ"
 
 # ---------------------------------------------------------------------------
 # runtime: 実行環境の設定
