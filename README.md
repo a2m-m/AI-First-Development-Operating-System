@@ -284,5 +284,6 @@ PR を merge する最低条件：
 | `03_Project_Instance_Guide.md` | Instance の立ち上げ手順（手順書） |
 | `docs/architecture.md` | アーキテクチャ・設計方針 |
 | `docs/tuning-guide.md` | 改善ループ運用ガイド（仕組み更新のプロセス） |
+| `docs/remote-dev-setup-guide.md` | リモート開発環境セットアップガイド（Claude Code 版） |
 | `.ai-instructions.md` | AI エージェント向け共通規約 |
 | `.ai-context.md` | 現在の状態・進行中 Issue・次の手 |
