@@ -5,11 +5,79 @@ import sys
 import os
 import re
 import subprocess
+import textwrap
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 CONFIG_FILE = os.path.join(ROOT_DIR, 'os-template.yml')
 README_FILE = os.path.join(ROOT_DIR, 'README.md')
 AI_CONTEXT_FILE = os.path.join(ROOT_DIR, '.ai-context.md')
+
+INITIAL_AI_CONTEXT = textwrap.dedent("""\
+    # .ai-context.md
+
+    AIエージェントが作業開始時に現在の状態・進行中Issue・次の手を把握するためのコンテキストファイル。
+    **作業開始前に必ず読むこと。作業終了時に必ず更新すること。**
+
+    ---
+
+    ## 1. Status
+
+    <!-- TODO: 現在の状態を works / broken で記載し、補足があれば追記する -->
+
+    | 項目 | 状態 |
+    |---|---|
+    | 全体 | `works` |
+    | 補足 | `Initial instance setup` |
+
+    ---
+
+    ## 2. Active Issues
+
+    <!-- TODO: 現在進行中の Issue をリンク付きで記載する。完了済みは除外し、常に最新状態を保つ -->
+
+    | Issue | 要点 | 担当 |
+    |---|---|---|
+
+    ---
+
+    ## 3. Decisions
+
+    <!-- TODO: 仕様・方針の意思決定を記録する。「なぜそうしたか」を必ず残す -->
+
+    | 日付 | 決定事項 | 理由 | 関連Issue |
+    |---|---|---|---|
+
+    ---
+
+    ## 4. Next actions
+
+    <!-- TODO: 優先度順に次のアクションを記載する。エージェントはここを見て次の作業を判断する -->
+
+    1. `os-template.yml` の `commands.*` をプロジェクト用に更新する
+    2. `docs/vision.md` / `docs/architecture.md` を記入する
+
+    ---
+
+    ## 5. Known pitfalls
+
+    <!-- 過去の失敗・詰まりポイントを蓄積する。新たな罠を発見したらここに追記する -->
+
+    ---
+
+    ## 6. Commands
+
+    <!-- TODO: プロジェクトで使用するコマンドを記載する。os-template.yml の commands.* と対応させる -->
+    <!-- INSTRUCTOR NOTE: scripts/init 経由で初期化されました。使用する言語に合わせて以下のTODOコマンドを更新してください -->
+
+    ---
+
+    ## 7. CI Notes
+
+    <!-- TODO: CI が落ちた時の典型原因と対処法を記載する。繰り返し発生するものを優先直に記録する -->
+
+    | 典型原因 | 対処法 | 最終発生 |
+    |---|---|---|
+    """)
 
 def get_safe_yaml_string(val):
     if val is None:
@@ -165,23 +233,9 @@ def update_ai_context():
     if not os.path.exists(AI_CONTEXT_FILE):
         print(f"Warning: {AI_CONTEXT_FILE} not found.")
         return
-        
-    with open(AI_CONTEXT_FILE, 'r', encoding='utf-8') as f:
-        content = f.read()
-        
-    # Initialize Status section
-    content = content.replace('| 全体 | `TODO: works / broken` |', '| 全体 | `works` |')
-    content = content.replace('| 補足 | `TODO: 状態の補足（例：CI緑、テスト未整備、etc.）` |', '| 補足 | `Initial instance setup` |')
-    
-    # Explicitly initialize Commands section formatting to ensure AC4 is met precisely
-    if "## 6. Commands" in content:
-        content = content.replace(
-            "<!-- TODO: プロジェクトで使用するコマンドを記載する。os-template.yml の commands.* と対応させる -->",
-            "<!-- TODO: プロジェクトで使用するコマンドを記載する。os-template.yml の commands.* と対応させる -->\n<!-- INSTRUCTOR NOTE: scripts/init 経由で初期化されました。使用する言語に合わせて以下のTODOコマンドを更新してください -->"
-        )
-    
+
     with open(AI_CONTEXT_FILE, 'w', encoding='utf-8') as f:
-        f.write(content)
+        f.write(INITIAL_AI_CONTEXT)
         
     print(f"Initialized: {AI_CONTEXT_FILE}")
 

@@ -70,7 +70,7 @@ def main():
             is_secret = _is_blocked(target_path, blocked_patterns)
 
         if tool_name in file_tools and is_secret:
-            print(f"SECURITY BLOCK: Access to secret file '{target_path}' is strictly prohibited by AI-First-Development-Operating-System rules.", file=sys.stderr)
+            print(f"SECURITY BLOCK: Access to secret file '{target_path}' is strictly prohibited by the template security policy.", file=sys.stderr)
             sys.exit(2)
 
         if tool_name == "Bash":

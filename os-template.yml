@@ -4,6 +4,7 @@
 #
 # このファイルは 02_OS_Template_Spec.md Section 4.1 に基づく。
 # CI と scripts/run はこのファイルの commands を読んで実行する。
+# OS Template Repo ではこのファイルをプレースホルダ付きの雛形として保持する。
 #
 # 運用ルール（Section 4.1.2）:
 #   - commands.lint と commands.test は必ず埋めること（空は禁止）
@@ -17,16 +18,16 @@ schema_version: "1"
 # project: プロジェクト識別情報
 # ---------------------------------------------------------------------------
 project:
-  name: "Diffairy"
-  owner: "a2m-m"
-  description: "AIがファイルの差分を日本語で解説・通知する macOS ネイティブアプリ"
+  name: "YOUR_PROJECT_NAME"
+  owner: "YOUR_TEAM_OR_OWNER"
+  description: "プロジェクトの説明"
 
 # ---------------------------------------------------------------------------
 # runtime: 実行環境の設定
 # ---------------------------------------------------------------------------
 runtime:
   mode: "docker"                      # "docker" | "host"
-  docker_image: "alpine"              # TODO: 必須（mode=docker の場合） — イメージを指定する (例: "your-image:tag")
+  docker_image: "your-image:tag"      # TODO: 必須（mode=docker の場合） — イメージを指定する (例: "your-image:tag")
   host_setup_steps: []                # mode=host の場合推奨 (例: ["python -m venv .venv", "pip install -r requirements.txt"])
 
 # ---------------------------------------------------------------------------

@@ -73,8 +73,9 @@ class TestConfig(unittest.TestCase):
         if os.path.exists(real_path):
             cfg = config.load_config(real_path)
             self.assertIsInstance(cfg['project']['name'], str)
+            self.assertEqual(cfg['project']['name'], 'YOUR_PROJECT_NAME')
             self.assertEqual(cfg['runtime']['mode'], 'docker')
-            self.assertEqual(cfg['runtime']['docker_image'], 'alpine')
+            self.assertEqual(cfg['runtime']['docker_image'], 'your-image:tag')
             self.assertEqual(cfg['runtime']['host_setup_steps'], [])
             self.assertEqual(cfg['commands']['lint'], "echo 'skip'")
             self.assertEqual(cfg['policy']['max_diff_warning'], 1200)
