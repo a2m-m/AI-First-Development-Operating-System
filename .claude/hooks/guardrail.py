@@ -5,11 +5,6 @@ import re
 import os
 import fnmatch
 
-_HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
-_REPO_ROOT = os.path.dirname(_HOOKS_DIR)
-_SCRIPTS_LIB = os.path.join(_REPO_ROOT, "scripts", "lib")
-_OS_TEMPLATE = os.path.join(_REPO_ROOT, "os-template.yml")
-
 # デフォルトの機密ファイル遮断パターン（os-template.yml 未設定時のフォールバック）
 _DEFAULT_BLOCKED_PATTERNS = [
     ".env",
@@ -24,9 +19,14 @@ def _load_blocked_patterns():
     """os-template.yml から security.blocked_file_patterns を読み込む。
     未設定・読み込み失敗時はデフォルトパターンを返す。"""
     try:
-        sys.path.insert(0, _SCRIPTS_LIB)
+        hooks_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.dirname(hooks_dir)
+        scripts_lib = os.path.join(repo_root, "scripts", "lib")
+        os_template = os.path.join(repo_root, "os-template.yml")
+
+        sys.path.insert(0, scripts_lib)
         from config import get_value
-        patterns = get_value(_OS_TEMPLATE, "security.blocked_file_patterns")
+        patterns = get_value(os_template, "security.blocked_file_patterns")
         if patterns and isinstance(patterns, list) and len(patterns) > 0:
             return patterns
     except Exception:
@@ -96,4 +96,7 @@ def main():
         sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        sys.exit(0)  # 最終安全網: 想定外のクラッシュでも fail-open
