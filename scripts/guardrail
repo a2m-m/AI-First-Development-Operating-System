@@ -7,6 +7,12 @@ import urllib.request
 import urllib.error
 import json
 
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_SCRIPTS_DIR)
+_OS_TEMPLATE = os.path.join(_REPO_ROOT, "os-template.yml")
+sys.path.insert(0, _SCRIPTS_DIR)
+from lib import config as _config
+
 def run_command(cmd, shell=False, timeout=30):
     if isinstance(cmd, str) and not shell:
         import shlex
@@ -58,7 +64,8 @@ def get_ai_review():
         print("No diff found. Skipping review.")
         sys.exit(0)
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    model = _config.get_value(_OS_TEMPLATE, "ai.model") or "gemini-2.5-flash"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     
     prompt = f"""
 あなたは強力なコードレビュワー（QA/Architect）です。以下のコード差分をレビューし、問題点があれば教育的なフィードバックをJSON形式で提供してください。
