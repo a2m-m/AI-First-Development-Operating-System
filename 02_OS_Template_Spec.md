@@ -112,9 +112,14 @@ features:
   guardrail: true  
   lcg: false
 
-policy:  
-  allow\_skip\_typecheck: true   \# true の場合、空でもOK（READMEに理由を記載）  
-  max\_diff\_warning: 1200       \# 行数目安（警告のみ）  
+security:
+  blocked\_file\_patterns:       \# .claude/hooks/guardrail.py が読み込む機密ファイル遮断パターン（glob 形式）
+    \- ".env"                    \# 未定義時はデフォルトパターン（.env / credentials* / secret*）が適用される
+    \- "credentials\*"
+
+policy:
+  allow\_skip\_typecheck: true   \# true の場合、空でもOK（READMEに理由を記載）
+  max\_diff\_warning: 1200       \# 行数目安（警告のみ）
   max\_file\_warning: 30         \# ファイル数目安（警告のみ）
 
 #### **4.1.2 運用ルール**
@@ -340,8 +345,29 @@ Quickstart例（テンプレに入れる）：
 
 ### **7.4 guardrail / lcg（推奨）**
 
-* 導入は段階的（最初はコメントのみ、BLOCKER/HIGHのみブロック）  
+* 導入は段階的（最初はコメントのみ、BLOCKER/HIGHのみブロック）
 * 同じ指摘が続いたら「人を責めずにテンプレを改善」
+
+#### **7.4.1 Claude Code フック（機密ファイル遮断）**
+
+`.claude/hooks/guardrail.py` は `PreToolUse` フックとして動作し、AIが機密ファイルへアクセスする前に遮断する。
+
+遮断対象パターンは `os-template.yml` の `security.blocked_file_patterns` で設定できる（glob 形式）：
+
+```yaml
+security:
+  blocked_file_patterns:
+    - ".env"
+    - ".env.*"
+    - "**/.env"
+    - "credentials*"
+    - "**/secret*"
+    - "my-project-secrets.json"   # Instance 固有のパターンを追加可能
+```
+
+* パターンは `fnmatch` で評価される（ファイル名マッチ・フルパスマッチの両方を試みる）
+* `security` セクションが未定義、またはリストが空の場合はスクリプト組み込みのデフォルトパターンが使われる
+* 読み込みエラー時も同様にデフォルト動作を保証する（セーフティネット）
 
 ---
 
