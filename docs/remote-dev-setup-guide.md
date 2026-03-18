@@ -217,4 +217,3 @@ Tailscale 経由の接続のみ許可される状態で安全に使えます。
 - `03_Project_Instance_Guide.md` — プロジェクト Instance の立ち上げ手順
 - `.ai-context.md` — 現在の作業状態・次のアクション
 - `.claude/CLAUDE.md` — Claude Code のルール・スキル一覧
-- `docs/archived/remote-dev-setup-guide-antigravity.md` — 旧ガイド（Antigravity 版、アーカイブ済み）

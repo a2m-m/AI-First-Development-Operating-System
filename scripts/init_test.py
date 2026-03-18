@@ -18,7 +18,7 @@ runtime:
   docker_image: ""
 """
 
-MOCK_README = """# Diffairy
+MOCK_README = """# Template Repo
 
 > **YOUR_PROJECT_NAME** — YOUR_TEAM_OR_OWNER
 
