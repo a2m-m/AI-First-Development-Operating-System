@@ -27,6 +27,22 @@ class TestClaudeGuardrailHook(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("SECURITY BLOCK", result.stderr)
 
+    def test_read_blocks_nested_secret_paths(self):
+        for path in [
+            "path/to/.env",
+            "path/to/.env.local",
+            "src/credentials.txt",
+            "path/to/secret-prod.txt",
+        ]:
+            with self.subTest(path=path):
+                result = self.run_hook({
+                    "tool_name": "Read",
+                    "tool_input": {"file_path": path},
+                })
+
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(path, result.stderr)
+
     def test_bash_blocks_env_file_reference(self):
         result = self.run_hook({
             "tool_name": "Bash",
@@ -44,6 +60,21 @@ class TestClaudeGuardrailHook(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("secret-prod.txt", result.stderr)
+
+    def test_bash_blocks_nested_secret_paths(self):
+        for command, blocked_path in [
+            ("cat path/to/.env", "path/to/.env"),
+            ("cat src/credentials.txt", "src/credentials.txt"),
+            ("cat path/to/secret-prod.txt", "path/to/secret-prod.txt"),
+        ]:
+            with self.subTest(command=command):
+                result = self.run_hook({
+                    "tool_name": "Bash",
+                    "tool_input": {"command": command},
+                })
+
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(blocked_path, result.stderr)
 
     def test_bash_warns_on_external_network_request(self):
         result = self.run_hook({

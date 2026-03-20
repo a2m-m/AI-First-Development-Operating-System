@@ -34,6 +34,9 @@ _SHELL_OPERATORS = {
     "&>",
 }
 
+def _normalize_match_path(value):
+    return str(value or "").replace("\\", "/")
+
 def _load_blocked_patterns():
     """os-template.yml から security.blocked_file_patterns を読み込む。
     未設定・読み込み失敗時はデフォルトパターンを返す。"""
@@ -55,15 +58,26 @@ def _load_blocked_patterns():
 
 def _is_blocked(path, patterns):
     """path が patterns のいずれかにマッチすれば True を返す。"""
-    name = os.path.basename(str(path))
-    full = str(path)
+    full = _normalize_match_path(path)
+    name = full.rsplit("/", 1)[-1]
     for p in patterns:
-        # ファイル名マッチ（glob プレフィックスを除いた末尾パターンで照合）
-        basename_pattern = p.lstrip("**/").lstrip("/")
-        if fnmatch.fnmatch(name, basename_pattern):
+        pattern = _normalize_match_path(p)
+
+        # フルパスマッチ。fnmatch は '/' を含む文字列もそのまま扱えるので、
+        # `**/.env` のようなパターンはネストしたパスにも適用できる。
+        if fnmatch.fnmatch(full, pattern):
             return True
-        # フルパスマッチ
-        if fnmatch.fnmatch(full, p):
+
+        # basename-only パターン、または `**/name` のような再帰パターンは
+        # どのディレクトリ配下でも同名ファイルを止めたいので basename にも適用する。
+        if "/" not in pattern:
+            basename_pattern = pattern
+        elif pattern.startswith("**/"):
+            basename_pattern = pattern[3:]
+        else:
+            basename_pattern = ""
+
+        if basename_pattern and fnmatch.fnmatch(name, basename_pattern):
             return True
     return False
 
