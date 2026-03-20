@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import sys
 import json
-import re
 import os
 import fnmatch
+import shlex
 
 # デフォルトの機密ファイル遮断パターン（os-template.yml 未設定時のフォールバック）
 _DEFAULT_BLOCKED_PATTERNS = [
@@ -14,6 +14,25 @@ _DEFAULT_BLOCKED_PATTERNS = [
     "credentials*",
     "**/secret*",
 ]
+
+_SHELL_OPERATORS = {
+    "|",
+    "||",
+    "&&",
+    ";",
+    "&",
+    "(",
+    ")",
+    "<",
+    "<<",
+    ">",
+    ">>",
+    "1>",
+    "1>>",
+    "2>",
+    "2>>",
+    "&>",
+}
 
 def _load_blocked_patterns():
     """os-template.yml から security.blocked_file_patterns を読み込む。
@@ -48,6 +67,34 @@ def _is_blocked(path, patterns):
             return True
     return False
 
+def _iter_bash_candidates(command):
+    """Split a Bash command and yield path-like candidates for secret checks."""
+    text = str(command or "")
+
+    try:
+        tokens = shlex.split(text, posix=True)
+    except ValueError:
+        tokens = text.split()
+
+    for token in tokens:
+        candidate = token.strip().strip("'\"")
+        if not candidate or candidate in _SHELL_OPERATORS:
+            continue
+
+        yield candidate
+
+        if "=" in candidate:
+            _, rhs = candidate.split("=", 1)
+            rhs = rhs.strip().strip("'\"")
+            if rhs:
+                yield rhs
+
+def _find_blocked_bash_reference(command, patterns):
+    for candidate in _iter_bash_candidates(command):
+        if _is_blocked(candidate, patterns):
+            return candidate
+    return None
+
 def main():
     try:
         input_data = sys.stdin.read()
@@ -76,9 +123,9 @@ def main():
 
         if tool_name == "Bash":
             command = tool_input.get("command", "")
-            # Check for secrets passing in command
-            if any(re.search(r'\b' + p + r'\b', str(command), re.IGNORECASE) for p in ["\.env", "credentials"]):
-                print(f"SECURITY BLOCK: Bash command references a secret file. Command blocked.", file=sys.stderr)
+            blocked_ref = _find_blocked_bash_reference(command, blocked_patterns)
+            if blocked_ref:
+                print(f"SECURITY BLOCK: Bash command references a secret file '{blocked_ref}'. Command blocked.", file=sys.stderr)
                 sys.exit(2)
 
             # Check for external URLs via bash

@@ -11,6 +11,7 @@ set -e
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="${ROOT_DIR}/os-template.yml"
+REQUIREMENTS_FILE="${ROOT_DIR}/requirements.txt"
 
 # -----------------------------------------------------------------------------
 # Helper: get_yaml_value
@@ -21,6 +22,20 @@ get_yaml_value() {
     python3 "${ROOT_DIR}/scripts/lib/config.py" "${CONFIG_FILE}" "${key_path}"
 }
 
+ensure_python_dependencies() {
+    if python3 -c "import yaml" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "Error: PyYAML is required to read os-template.yml."
+    if [ -f "${REQUIREMENTS_FILE}" ]; then
+        echo "Install it with: python3 -m pip install -r ${REQUIREMENTS_FILE}"
+    else
+        echo "Install it with: python3 -m pip install pyyaml"
+    fi
+    exit 1
+}
+
 # -----------------------------------------------------------------------------
 # Validation: Ensure os-template.yml exists
 # -----------------------------------------------------------------------------
@@ -29,6 +44,8 @@ if [ ! -f "${CONFIG_FILE}" ]; then
     echo "Please configure os-template.yml or run scripts/init first."
     exit 1
 fi
+
+ensure_python_dependencies
 
 # -----------------------------------------------------------------------------
 # Subcommand: doctor
