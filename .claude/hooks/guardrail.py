@@ -20,7 +20,8 @@ def _load_blocked_patterns():
     未設定・読み込み失敗時はデフォルトパターンを返す。"""
     try:
         hooks_dir = os.path.dirname(os.path.abspath(__file__))
-        repo_root = os.path.dirname(hooks_dir)
+        claude_dir = os.path.dirname(hooks_dir)
+        repo_root = os.path.dirname(claude_dir)
         scripts_lib = os.path.join(repo_root, "scripts", "lib")
         os_template = os.path.join(repo_root, "os-template.yml")
 
