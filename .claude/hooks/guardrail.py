@@ -54,6 +54,7 @@ def _compile_blocked_patterns(patterns):
     return compiled
 
 
+
 def _load_blocked_patterns():
     """os-template.yml から security.blocked_file_patterns を読み込む。
     未設定・読み込み失敗時はデフォルトパターンを返す。"""
