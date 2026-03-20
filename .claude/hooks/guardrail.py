@@ -4,6 +4,8 @@ import json
 import os
 import fnmatch
 import shlex
+import re
+from functools import lru_cache
 
 # デフォルトの機密ファイル遮断パターン（os-template.yml 未設定時のフォールバック）
 _DEFAULT_BLOCKED_PATTERNS = [
@@ -37,6 +39,20 @@ _SHELL_OPERATORS = {
 def _normalize_match_path(value):
     return str(value or "").replace("\\", "/")
 
+@lru_cache(maxsize=32)
+def _compile_blocked_patterns(patterns):
+    compiled = []
+    for raw_pattern in patterns:
+        pattern = _normalize_match_path(raw_pattern)
+        compiled.append(("full", re.compile(fnmatch.translate(pattern))))
+
+        if "/" not in pattern:
+            compiled.append(("basename", re.compile(fnmatch.translate(pattern))))
+        elif pattern.startswith("**/"):
+            compiled.append(("basename", re.compile(fnmatch.translate(pattern[3:]))))
+
+    return compiled
+
 def _load_blocked_patterns():
     """os-template.yml から security.blocked_file_patterns を読み込む。
     未設定・読み込み失敗時はデフォルトパターンを返す。"""
@@ -60,24 +76,9 @@ def _is_blocked(path, patterns):
     """path が patterns のいずれかにマッチすれば True を返す。"""
     full = _normalize_match_path(path)
     name = full.rsplit("/", 1)[-1]
-    for p in patterns:
-        pattern = _normalize_match_path(p)
-
-        # フルパスマッチ。fnmatch は '/' を含む文字列もそのまま扱えるので、
-        # `**/.env` のようなパターンはネストしたパスにも適用できる。
-        if fnmatch.fnmatch(full, pattern):
-            return True
-
-        # basename-only パターン、または `**/name` のような再帰パターンは
-        # どのディレクトリ配下でも同名ファイルを止めたいので basename にも適用する。
-        if "/" not in pattern:
-            basename_pattern = pattern
-        elif pattern.startswith("**/"):
-            basename_pattern = pattern[3:]
-        else:
-            basename_pattern = ""
-
-        if basename_pattern and fnmatch.fnmatch(name, basename_pattern):
+    for scope, pattern in _compile_blocked_patterns(tuple(patterns)):
+        target = full if scope == "full" else name
+        if pattern.match(target):
             return True
     return False
 
