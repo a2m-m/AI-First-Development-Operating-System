@@ -13,6 +13,11 @@ _OS_TEMPLATE = os.path.join(_REPO_ROOT, "os-template.yml")
 sys.path.insert(0, _SCRIPTS_DIR)
 from lib import config as _config
 
+def get_ai_settings():
+    provider = _config.get_value(_OS_TEMPLATE, "ai.provider") or "gemini"
+    model = _config.get_value(_OS_TEMPLATE, "ai.model") or "gemini-2.5-flash"
+    return provider, model
+
 def run_command(cmd, shell=False, timeout=30):
     if isinstance(cmd, str) and not shell:
         import shlex
@@ -56,15 +61,22 @@ def get_diff_text():
 def get_ai_review():
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            print("Error: GEMINI_API_KEY is required when guardrail is enabled.")
+            sys.exit(1)
         print("GEMINI_API_KEY is not set. Skipping real AI review.")
         sys.exit(0)
+
+    provider, model = get_ai_settings()
+    if provider != "gemini":
+        print(f"Error: Unsupported ai.provider '{provider}'. Only 'gemini' is currently supported.")
+        sys.exit(1)
         
     diff_text = get_diff_text()
     if not diff_text.strip():
         print("No diff found. Skipping review.")
         sys.exit(0)
-        
-    model = _config.get_value(_OS_TEMPLATE, "ai.model") or "gemini-2.5-flash"
+
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     
     prompt = f"""

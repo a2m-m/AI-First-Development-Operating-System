@@ -33,8 +33,31 @@ jobs:
             echo "LCG is disabled in os-template.yml. Skipping."
           fi
 
-      - name: Run LCG
+      - name: Install Python dependencies
         if: steps.check.outputs.enabled == 'true'
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+
+      - name: Prepare LCG Execution
+        if: steps.check.outputs.enabled == 'true'
+        id: prepare-ai
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        run: |
+          if [ -n "${GEMINI_API_KEY}" ]; then
+            echo "ready=true" >> $GITHUB_OUTPUT
+          elif [ "${IS_FORK}" = "true" ]; then
+            echo "::notice::GEMINI_API_KEY is unavailable for forked pull requests. Skipping LCG."
+            echo "ready=false" >> $GITHUB_OUTPUT
+          else
+            echo "::error::GEMINI_API_KEY is required when features.lcg is true."
+            exit 1
+          fi
+
+      - name: Run LCG
+        if: steps.check.outputs.enabled == 'true' && steps.prepare-ai.outputs.ready == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

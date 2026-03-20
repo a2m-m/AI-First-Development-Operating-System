@@ -10,7 +10,10 @@ import json
 from datetime import datetime
 
 # Add scripts/lib to path so config can be imported securely
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib'))
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_SCRIPTS_DIR)
+_OS_TEMPLATE = os.path.join(_REPO_ROOT, "os-template.yml")
+sys.path.insert(0, os.path.join(_SCRIPTS_DIR, 'lib'))
 import config as custom_config
 
 
@@ -69,6 +72,11 @@ def get_config():
         
     return config
 
+def get_ai_settings():
+    provider = custom_config.get_value(_OS_TEMPLATE, "ai.provider") or "gemini"
+    model = custom_config.get_value(_OS_TEMPLATE, "ai.model") or "gemini-2.5-flash"
+    return provider, model
+
 
 def is_huge_diff(config, diff_text):
     max_diff_warning = config.get('policy', {}).get('max_diff_warning', 1200)
@@ -124,6 +132,9 @@ def get_ai_lcg_mock(is_huge, diff_text=""):
 def generate_learning_content(is_huge, diff_text):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            print("Error: GEMINI_API_KEY is required when LCG is enabled.")
+            sys.exit(1)
         print("GEMINI_API_KEY is not set. Using mock for local testing.")
         return get_ai_lcg_mock(is_huge, diff_text)
 
@@ -131,7 +142,12 @@ def generate_learning_content(is_huge, diff_text):
         print("No diff found. Skipping AI content generation.")
         return None
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    provider, model = get_ai_settings()
+    if provider != "gemini":
+        print(f"Error: Unsupported ai.provider '{provider}'. Only 'gemini' is currently supported.")
+        sys.exit(1)
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     
     huge_instruction = ""
     if is_huge:
