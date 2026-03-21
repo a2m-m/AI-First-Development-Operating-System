@@ -120,6 +120,7 @@
 | `/ci-failure-triage` | CI失敗を解析して Bug Issue を自動作成 | — | ユーザー |
 | `/release-notes` | タグ間の変更からリリースノートを生成 | — | ユーザー |
 | `/skill-create` | 反復作業を新しいスキルとして定義 | `<名前> <理由>` | ユーザー |
+| `/project-setup` | テンプレ複製後の初期セットアップ確認（初期化・資材・公開物・GitHub接続） | — | ユーザー |
 | `context-sync` | `.ai-context.md` を読んで状態同期 | — | **Claude 専用（セッション開始時に自動実行）** |
 
 ---
