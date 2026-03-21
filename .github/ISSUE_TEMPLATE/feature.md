@@ -9,6 +9,12 @@ assignees: ''
 ## Background / Why
 <!-- なぜこのFeatureが必要か。解決する問題・課題・文脈を書く -->
 
+## Related Issues
+<!-- 同じ機能グループ（認証・UIデザイン・CI など）に属する Issue を列挙する -->
+<!-- scope/xxx ラベルも付与すること（例: scope/auth, scope/design, scope/ci） -->
+- Related: #
+<!-- 関連がない場合は "なし" と書く -->
+
 ## Scope（やること）
 <!-- このIssueのスコープ。具体的に何を実装・変更するか -->
 
