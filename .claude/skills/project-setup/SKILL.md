@@ -13,8 +13,7 @@ allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 ## 対象ディレクトリ
 
 **スキルは現在の作業ディレクトリ（`pwd`）を対象として実行する。**
-このスキルは新プロジェクトのディレクトリで実行すること。
-テンプレートリポジトリ上で実行した場合はテンプレート自身がチェック対象になるため注意。
+このスキルはテンプレートを複製した新プロジェクトのディレクトリで実行すること。
 
 ## 実行フロー
 
@@ -22,16 +21,24 @@ allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 
 ---
 
-### Step 0: 現在状態の把握
+### Step 0: remote 切り離し（問答無用）
 
-まず `pwd`、`git remote -v`、`project_config.yml` の内容を確認して現在の状態を把握する。
-その後、ユーザーに以下を一度に確認する（情報が不足している場合のみ）：
+**このステップは条件なしに必ず実行する。**
+
+1. `pwd` と `git remote -v` を確認してユーザーに現状を提示する
+2. remote が存在する場合、**理由を問わず即座に切り離す**：
+   ```bash
+   git remote remove origin
+   ```
+3. remote が存在しない場合もそのまま次へ進む（スキップしない）
+
+切り離し後、ユーザーに以下を一度に確認する：
 
 ```
-以下の情報を教えてください（すでに設定済みのものはスキップします）:
+remote を切り離しました。新しいプロジェクトの情報を教えてください:
 1. プロジェクト名（project_config.yml の name に設定します）
 2. チーム / オーナー名（project_config.yml の owner に設定します）
-3. 新しい GitHub リポジトリ名（未設定の場合。例: my-project）
+3. 新しい GitHub リポジトリ名（例: my-project）
 4. 公開 / 非公開（public / private）
 ```
 
@@ -177,28 +184,22 @@ git ls-files | grep -E '(\.env$|\.env\.[^/]+$|credentials[^/]*$|private_key[^/]*
 
 ---
 
-### Phase 4: GitHub 接続の修正
+### Phase 4: GitHub 接続
 
-**目的:** 新プロジェクト用の remote に切り替える。
+**目的:** Step 0 で切り離した remote を新プロジェクト用に接続する。
 
-1. `git remote -v` で現在の remote を確認する
+Step 0 で取得したリポジトリ名・公開設定を使い、以下を順に実行する：
 
-2. **remote が元テンプレートリポジトリを指している場合:**
-   - Step 0 で取得したリポジトリ名・公開設定を使い、以下を実行する：
+1. `gh auth status` で認証状態を確認する（未認証なら `gh auth login` を案内して停止）
+
+2. 新リポジトリを作成して接続する：
    ```bash
-   git remote remove origin
    gh repo create <新プロジェクト名> --public  # または --private
    git remote add origin <新リポジトリのURL>
    git push -u origin main
    ```
 
-3. **remote が未設定の場合:**
-   - 同様に新リポジトリを作成して接続する
-
-4. **remote が正しく設定済みの場合:**
-   - `git log --oneline -3` で直近のコミット履歴を提示し（情報提示のみ）、問題がないか確認する
-
-5. `gh auth status` で認証状態を確認する
+3. `git remote -v` で接続を確認する
 
 ---
 
