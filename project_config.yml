@@ -75,6 +75,8 @@ security:
     - "**/.env.*"
     - "credentials*"
     - "**/credentials*"
+    - "secret*"
+    - "**/secret*"
     - "**/.secret*"
     - "**/secrets.json"
     - "**/secrets.yaml"

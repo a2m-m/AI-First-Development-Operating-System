@@ -58,7 +58,7 @@ class TestInitScript(unittest.TestCase):
         
         # Load the init script module dynamically
         repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        loader = importlib.machinery.SourceFileLoader('init_module', os.path.join(repo_dir, 'scripts', 'init'))
+        loader = importlib.machinery.SourceFileLoader('init_module', os.path.join(repo_dir, 'os_scripts', 'init'))
         spec = importlib.util.spec_from_loader(loader.name, loader)
         self.init_module = importlib.util.module_from_spec(spec)
         loader.exec_module(self.init_module)
@@ -96,7 +96,7 @@ class TestInitScript(unittest.TestCase):
         with open(self.init_module.AI_CONTEXT_FILE, 'r', encoding='utf-8') as f:
             content = f.read()
             self.assertIn('| 全体 | `works` |', content)
-            self.assertIn('INSTRUCTOR NOTE: scripts/init 経由で初期化されました', content)
+            self.assertIn('INSTRUCTOR NOTE: os_scripts/init 経由で初期化されました', content)
 
     @patch('sys.argv', ['init', '--project-name', 'TestApp', '--owner', 'testuser', '--runtime-mode', 'docker'])
     def test_missing_docker_image(self):

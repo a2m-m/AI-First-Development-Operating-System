@@ -15,6 +15,8 @@ _DEFAULT_BLOCKED_PATTERNS = [
     "**/.env.*",
     "credentials*",
     "**/credentials*",
+    "secret*",
+    "**/secret*",
     "**/.secret*",
     "**/secrets.json",
     "**/secrets.yaml",
