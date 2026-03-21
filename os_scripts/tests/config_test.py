@@ -2,7 +2,7 @@ import unittest
 import os
 import sys
 
-# Add scripts/lib to path so config can be imported
+# Add os_scripts/lib to path so config can be imported
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 import config
 
@@ -68,8 +68,8 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config.get_value(self.path, 'project.nonexistent'), None)
 
     def test_real_os_template(self):
-        # Smoke test actual os-template.yml
-        real_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'os-template.yml'))
+        # Smoke test actual project_config.yml
+        real_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'project_config.yml'))
         if os.path.exists(real_path):
             cfg = config.load_config(real_path)
             self.assertIsInstance(cfg['project']['name'], str)
@@ -88,7 +88,7 @@ class TestConfig(unittest.TestCase):
             self.assertTrue(cfg['security']['blocked_file_patterns'])
             self.assertIsInstance(cfg['policy']['max_diff_warning'], int)
         else:
-            self.skipTest("os-template.yml not found, skipping real file test")
+            self.skipTest("project_config.yml not found, skipping real file test")
 
 if __name__ == '__main__':
     unittest.main()

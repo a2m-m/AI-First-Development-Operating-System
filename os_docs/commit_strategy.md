@@ -59,7 +59,7 @@
 
 ### 仕様と閾値
 
-閾値はリポジトリルートの `os-template.yml` で定義された `policy` に従います。
+閾値はリポジトリルートの `project_config.yml` で定義された `policy` に従います。
 
 - **`policy.max_diff_warning`**: 1回のプッシュに含まれる変更行数の目安（デフォルト: `1200`行）
 - **`policy.max_file_warning`**: 1回のプッシュに含まれる変更ファイル数の目安（デフォルト: `30`ファイル）

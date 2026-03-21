@@ -8,7 +8,7 @@ import subprocess
 import textwrap
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-CONFIG_FILE = os.path.join(ROOT_DIR, 'os-template.yml')
+CONFIG_FILE = os.path.join(ROOT_DIR, 'project_config.yml')
 README_FILE = os.path.join(ROOT_DIR, 'README.md')
 AI_CONTEXT_FILE = os.path.join(ROOT_DIR, '.ai-context.md')
 
@@ -53,7 +53,7 @@ INITIAL_AI_CONTEXT = textwrap.dedent("""\
 
     <!-- TODO: 優先度順に次のアクションを記載する。エージェントはここを見て次の作業を判断する -->
 
-    1. `os-template.yml` の `commands.*` をプロジェクト用に更新する
+    1. `project_config.yml` の `commands.*` をプロジェクト用に更新する
     2. `docs/vision.md` / `docs/architecture.md` を記入する
 
     ---
@@ -66,8 +66,8 @@ INITIAL_AI_CONTEXT = textwrap.dedent("""\
 
     ## 6. Commands
 
-    <!-- TODO: プロジェクトで使用するコマンドを記載する。os-template.yml の commands.* と対応させる -->
-    <!-- INSTRUCTOR NOTE: scripts/init 経由で初期化されました。使用する言語に合わせて以下のTODOコマンドを更新してください -->
+    <!-- TODO: プロジェクトで使用するコマンドを記載する。project_config.yml の commands.* と対応させる -->
+    <!-- INSTRUCTOR NOTE: os_scripts/init 経由で初期化されました。使用する言語に合わせて以下のTODOコマンドを更新してください -->
 
     ---
 
@@ -87,7 +87,7 @@ def get_safe_yaml_string(val):
 
 def check_already_initialized(force):
     """
-    os-template.yml を読み込み、すでに YOUR_PROJECT_NAME が置換されているか確認する。
+    project_config.yml を読み込み、すでに YOUR_PROJECT_NAME が置換されているか確認する。
     """
     if not os.path.exists(CONFIG_FILE):
         return False
@@ -98,10 +98,10 @@ def check_already_initialized(force):
     # Check if the placeholder name still exists
     if not re.search(r'name:\s*"YOUR_PROJECT_NAME"', content):
         if force:
-            print("Warning: os-template.yml is already initialized. Overwriting because --force was provided.")
+            print("Warning: project_config.yml is already initialized. Overwriting because --force was provided.")
             return False
         else:
-            print("Error: os-template.yml is already initialized.")
+            print("Error: project_config.yml is already initialized.")
             print("To overwrite the existing configuration, run with the --force flag.")
             return True
     return False
@@ -138,7 +138,7 @@ def interactive_prompt(force):
     return project_name, owner, description, runtime_mode, docker_image, force
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Initialize the project instance (os-template.yml, README.md, .ai-context.md).")
+    parser = argparse.ArgumentParser(description="Initialize the project instance (project_config.yml, README.md, .ai-context.md).")
     parser.add_argument("--project-name", help="Name of the project")
     parser.add_argument("--owner", help="Team or Owner of the project")
     parser.add_argument("--description", help="Description of the project", default="")
@@ -170,9 +170,9 @@ def parse_args():
             print(f"  - {m}")
         print("\nNext step: Please provide the missing arguments as shown below or run without arguments for interactive mode:")
         if args.runtime_mode == "docker" or "--docker-image" in missing:
-            print("  ./scripts/init --project-name <name> --owner <owner> --runtime-mode docker --docker-image <image>")
+            print("  ./os_scripts/init --project-name <name> --owner <owner> --runtime-mode docker --docker-image <image>")
         else:
-            print("  ./scripts/init --project-name <name> --owner <owner> --runtime-mode docker|host")
+            print("  ./os_scripts/init --project-name <name> --owner <owner> --runtime-mode docker|host")
         sys.exit(1)
         
     return args.project_name, args.owner, args.description or "", args.runtime_mode, args.docker_image or "", args.force
@@ -241,9 +241,9 @@ def update_ai_context():
 
 def setup_git_hooks():
     try:
-        result = subprocess.run(["git", "config", "core.hooksPath", "scripts/hooks"], capture_output=True, text=True)
+        result = subprocess.run(["git", "config", "core.hooksPath", "os_scripts/hooks"], capture_output=True, text=True)
         if result.returncode == 0:
-            print("Git hooks configured: core.hooksPath set to scripts/hooks")
+            print("Git hooks configured: core.hooksPath set to os_scripts/hooks")
         else:
             print(f"Warning: Failed to set git core.hooksPath: {result.stderr.strip()}")
     except Exception as e:
@@ -257,12 +257,12 @@ def print_next_steps(runtime_mode):
     print("\n" + "-"*40)
     print("git checkout -b setup/init")
     print("git add -A")
-    print('git commit -m "chore: 初期セットアップ (scripts/init)"')
+    print('git commit -m "chore: 初期セットアップ (os_scripts/init)"')
     print("git push origin setup/init")
     print("-"*40 + "\n")
     if runtime_mode == 'host':
         print("Note: You selected 'host' runtime mode.")
-        print("Please make sure to add your setup scripts to 'host_setup_steps' in os-template.yml.")
+        print("Please make sure to add your setup scripts to 'host_setup_steps' in project_config.yml.")
 
 def main():
     project_name, owner, description, runtime_mode, docker_image, force = parse_args()

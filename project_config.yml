@@ -1,9 +1,9 @@
 # =============================================================================
-# os-template.yml — Instance 設定の唯一の入口
+# project_config.yml — Instance 設定の唯一の入口
 # =============================================================================
 #
 # このファイルは 02_OS_Template_Spec.md Section 4.1 に基づく。
-# CI と scripts/run はこのファイルの commands を読んで実行する。
+# CI と os_scripts/run はこのファイルの commands を読んで実行する。
 # OS Template Repo ではこのファイルをプレースホルダ付きの雛形として保持する。
 #
 # 運用ルール（Section 4.1.2）:
@@ -31,10 +31,10 @@ runtime:
   host_setup_steps: []                # mode=host の場合推奨 (例: ["python -m venv .venv", "pip install -r requirements.txt"])
 
 # ---------------------------------------------------------------------------
-# commands: scripts/run が実行するコマンド定義
+# commands: os_scripts/run が実行するコマンド定義
 # ---------------------------------------------------------------------------
 # CI とローカル実行はこのセクションのコマンドを叩くことで統一される。
-# lint と test は必須。空のままだと scripts/run doctor で警告、CI では失敗扱いとなる。
+# lint と test は必須。空のままだと os_scripts/run doctor で警告、CI では失敗扱いとなる。
 # ---------------------------------------------------------------------------
 commands:
   format: ""                          # optional: フォーマッタ (例: "black ." / "prettier --write .")
@@ -74,7 +74,10 @@ security:
     - "**/.env"
     - "**/.env.*"
     - "credentials*"
-    - "**/secret*"
+    - "**/credentials*"
+    - "**/.secret*"
+    - "**/secrets.json"
+    - "**/secrets.yaml"
 
 # ---------------------------------------------------------------------------
 # policy: プロジェクトポリシー

@@ -78,7 +78,7 @@ Instanceで埋める・変更してよいものは **これだけ**に絞る：
 
 言語/ツールが混在しても Template を固定化するため、Templateは以下のコントラクトを提供する。
 
-### **4.1 `os-template.yml`（Instance設定の唯一の入口）**
+### **4.1 `project_config.yml`（Instance設定の唯一の入口）**
 
 * Instanceはこの設定ファイルに **差分だけ**を記載する。  
 * CIとローカル実行は **このファイルの commands を叩く**ことで統一される。
@@ -130,24 +130,24 @@ policy:
 
 ---
 
-### **4.2 `scripts/run`（唯一の実行口）**
+### **4.2 `os_scripts/run`（唯一の実行口）**
 
 人もCIも **これだけ叩けばよい**を実現する。
 
 #### **4.2.1 サブコマンド**
 
-* `scripts/run format`  
-* `scripts/run lint`  
-* `scripts/run typecheck`  
-* `scripts/run test`  
-* `scripts/run build`  
-* `scripts/run ci`（標準：lint → typecheck（あれば）→ test）  
-* `scripts/run doctor`（設定不足/環境不足を診断）  
-* `scripts/run print-config`（最終的に解釈された設定を表示）
+* `os_scripts/run format`  
+* `os_scripts/run lint`  
+* `os_scripts/run typecheck`  
+* `os_scripts/run test`  
+* `os_scripts/run build`  
+* `os_scripts/run ci`（標準：lint → typecheck（あれば）→ test）  
+* `os_scripts/run doctor`（設定不足/環境不足を診断）  
+* `os_scripts/run print-config`（最終的に解釈された設定を表示）
 
 #### **4.2.2 期待される振る舞い（重要）**
 
-* `os-template.yml` がない/壊れている場合：**何が不足かを表示して非0終了**  
+* `project_config.yml` がない/壊れている場合：**何が不足かを表示して非0終了**  
 * command が空の場合：`doctor` で不足一覧表示、CIでは失敗扱い  
 * `runtime.mode=docker` の場合：  
   * `docker run` でコマンドを実行（マウント・workdir は標準化）  
@@ -160,7 +160,7 @@ policy:
 
 ---
 
-### **4.3 `scripts/init`（Instance化の儀式）**
+### **4.3 `os_scripts/init`（Instance化の儀式）**
 
 Template複製後、最初に叩く。
 
@@ -180,7 +180,7 @@ Template複製後、最初に叩く。
 
 #### **4.3.3 出力（必須）**
 
-* `os-template.yml` を生成/更新  
+* `project_config.yml` を生成/更新  
 * READMEのプレースホルダ置換（プロジェクト名など）  
 * `.ai-context.md` の Commands セクションを初期化（未設定なら TODO 明示）  
 * “最初のPRでCIを通す最短手順”を表示（コピーして実行できる形）
@@ -200,7 +200,7 @@ MUST \= 必須 / SHOULD \= 推奨（ただし可能なら入れる）
 * MUST `README.md`  
 * MUST `.ai-instructions.md`  
 * MUST `.ai-context.md`  
-* MUST `os-template.yml`（テンプレに“例＋TODO”で同梱）  
+* MUST `project_config.yml`（テンプレに“例＋TODO”で同梱）  
 * MUST `scripts/`  
 * MUST `.github/`  
 * MUST `docs/`  
@@ -209,8 +209,8 @@ MUST \= 必須 / SHOULD \= 推奨（ただし可能なら入れる）
 
 ### **5.2 `docs/`**
 
-* MUST `docs/vision.md`  
-* MUST `docs/architecture.md`  
+* MUST `os_docs/vision.md`  
+* MUST `os_docs/architecture.md`  
 * MUST `docs/decisions/README.md`（ADR運用ルール）  
 * SHOULD `docs/decisions/0001-template-contract.md`（コントラクトの初期ADR）  
 * SHOULD `docs/learning/README.md`  
@@ -230,10 +230,10 @@ MUST \= 必須 / SHOULD \= 推奨（ただし可能なら入れる）
 
 ### **5.4 `scripts/`**
 
-* MUST `scripts/run`  
-* MUST `scripts/init`  
-* SHOULD `scripts/hooks/pre-push`（導入しやすい場合）  
-* SHOULD `scripts/lib/`（共通関数）
+* MUST `os_scripts/run`  
+* MUST `os_scripts/init`  
+* SHOULD `os_scripts/hooks/pre-push`（導入しやすい場合）  
+* SHOULD `os_scripts/lib/`（共通関数）
 
 ### **5.5 `.claude/`**
 
@@ -251,7 +251,7 @@ MUST \= 必須 / SHOULD \= 推奨（ただし可能なら入れる）
 
 1. このリポは何か（OS Template / Instance）  
 2. Quickstart（複製→init→最初のPR）  
-3. Contract（`os-template.yml` / `scripts/run`）  
+3. Contract（`project_config.yml` / `os_scripts/run`）  
 4. Day-1 flow（Issue→PR→CI→merge）  
 5. Troubleshooting（doctor、よくある詰まり）  
 6. OSの運用（DoD、Maintenance）
@@ -261,18 +261,18 @@ Quickstart例（テンプレに入れる）：
 \# 1\) Templateからリポを作成（GitHub UI）  
 \# 2\) clone  
 \# 3\) init  
-./scripts/init \--project-name YOUR\_PROJECT \--owner YOUR\_TEAM \--runtime-mode docker \--docker-image your-image:tag
+./os_scripts/init \--project-name YOUR\_PROJECT \--owner YOUR\_TEAM \--runtime-mode docker \--docker-image your-image:tag
 
 \# 4\) 設定確認  
-./scripts/run doctor  
-./scripts/run ci
+./os_scripts/run doctor  
+./os_scripts/run ci
 
 ### **6.2 `.ai-instructions.md`（必須）**
 
 * AIにやらせる時の規約（出力先、変更方針、禁止事項）  
 * 「Templateのコントラクトを壊さない」ことを明記  
 * 生成物は “小さく分けてPR” を推奨  
-* 例：IssueのACを満たす／勝手に巨大改修しない／設定は `os-template.yml` に寄せる
+* 例：IssueのACを満たす／勝手に巨大改修しない／設定は `project_config.yml` に寄せる
 
 ### **6.3 `.ai-context.md`（必須：固定フォーマット）**
 
@@ -313,7 +313,7 @@ Quickstart例（テンプレに入れる）：
 ### **6.5 PR テンプレ**
 
 * What / Why（Issueリンク）  
-* How to test（`scripts/run ...` を書く）  
+* How to test（`os_scripts/run ...` を書く）  
 * Risk / Rollback  
 * Screenshots / Logs（任意）  
 * “今回やらないこと”（未来のIssueへ）
@@ -327,10 +327,10 @@ Quickstart例（テンプレに入れる）：
 * PR と main push で起動  
 * やることは固定：  
   1. checkout  
-  2. `./scripts/run doctor`  
-  3. `./scripts/run ci`
+  2. `./os_scripts/run doctor`  
+  3. `./os_scripts/run ci`
 
-これでCIは言語を知らずに済む。言語差分は `os-template.yml` へ。
+これでCIは言語を知らずに済む。言語差分は `project_config.yml` へ。
 
 ### **7.2 `secrets.yml`（必須）**
 
@@ -341,7 +341,7 @@ Quickstart例（テンプレに入れる）：
 ### **7.3 dependency scan（推奨）**
 
 * 可能ならGitHub標準（Dependabot等）や軽量スキャンを使う  
-* 言語依存が強い場合は “枠だけ”を用意し、`os-template.yml.features.dependency_scan` でON/OFF
+* 言語依存が強い場合は “枠だけ”を用意し、`project_config.yml.features.dependency_scan` でON/OFF
 
 ### **7.4 guardrail / lcg（推奨）**
 
@@ -352,7 +352,7 @@ Quickstart例（テンプレに入れる）：
 
 `.claude/hooks/guardrail.py` は `PreToolUse` フックとして動作し、AIが機密ファイルへアクセスする前に遮断する。
 
-遮断対象パターンは `os-template.yml` の `security.blocked_file_patterns` で設定できる（glob 形式）：
+遮断対象パターンは `project_config.yml` の `security.blocked_file_patterns` で設定できる（glob 形式）：
 
 ```yaml
 security:
@@ -442,17 +442,17 @@ Template Repo 完成の判定は、以下を満たすこと。
 ### **11.1 Template レベル（Template単体）**
 
 * 本書の Repo Manifest の MUST が全て存在する  
-* `os-template.yml` がテンプレとして同梱されている（例＋TODOでも良い）  
-* `scripts/run doctor` が「不足項目」を一覧で出せる  
-* `scripts/run ci` が（設定が埋まれば） lint/test を実行できる  
-* GitHub Actions がPRで起動し、`./scripts/run doctor` と `./scripts/run ci` を走らせる  
+* `project_config.yml` がテンプレとして同梱されている（例＋TODOでも良い）  
+* `os_scripts/run doctor` が「不足項目」を一覧で出せる  
+* `os_scripts/run ci` が（設定が埋まれば） lint/test を実行できる  
+* GitHub Actions がPRで起動し、`./os_scripts/run doctor` と `./os_scripts/run ci` を走らせる  
 * secretsスキャンのworkflowがPRで起動する  
 * `.ai-context.md` が固定フォーマットで存在する  
 * Issue/PRテンプレが存在し、Commit Plan 欄がある
 
 ### **11.2 Instance レベル（複製して動かせる）**
 
-* `scripts/init` で `os-template.yml` が埋まり、Quickstart通りに `scripts/run ci` が実行できる  
+* `os_scripts/init` で `project_config.yml` が埋まり、Quickstart通りに `os_scripts/run ci` が実行できる  
 * 未設定がある場合でも `doctor` が次の一手を提示する（“何をどこに書くか”まで）  
 * 最初のPRでCIが動く（成功/失敗どちらでも理由が明確）
 

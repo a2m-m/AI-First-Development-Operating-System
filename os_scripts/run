@@ -5,21 +5,21 @@ set -e
 # =============================================================================
 # scripts/run
 # =============================================================================
-# Description: The single entrypoint for executing commands defined in os-template.yml.
+# Description: The single entrypoint for executing commands defined in project_config.yml.
 # It provides a unified command set for both local development and CI.
 # =============================================================================
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_FILE="${ROOT_DIR}/os-template.yml"
+CONFIG_FILE="${ROOT_DIR}/project_config.yml"
 REQUIREMENTS_FILE="${ROOT_DIR}/requirements.txt"
 
 # -----------------------------------------------------------------------------
 # Helper: get_yaml_value
-# Extract values from os-template.yml without relying on external yq.
+# Extract values from project_config.yml without relying on external yq.
 # -----------------------------------------------------------------------------
 get_yaml_value() {
     local key_path="$1"
-    python3 "${ROOT_DIR}/scripts/lib/config.py" "${CONFIG_FILE}" "${key_path}"
+    python3 "${ROOT_DIR}/os_scripts/lib/config.py" "${CONFIG_FILE}" "${key_path}"
 }
 
 ensure_python_dependencies() {
@@ -27,7 +27,7 @@ ensure_python_dependencies() {
         return 0
     fi
 
-    echo "Error: PyYAML is required to read os-template.yml."
+    echo "Error: PyYAML is required to read project_config.yml."
     if [ -f "${REQUIREMENTS_FILE}" ]; then
         echo "Install it with: python3 -m pip install -r ${REQUIREMENTS_FILE}"
     else
@@ -37,11 +37,11 @@ ensure_python_dependencies() {
 }
 
 # -----------------------------------------------------------------------------
-# Validation: Ensure os-template.yml exists
+# Validation: Ensure project_config.yml exists
 # -----------------------------------------------------------------------------
 if [ ! -f "${CONFIG_FILE}" ]; then
-    echo "Error: os-template.yml not found."
-    echo "Please configure os-template.yml or run scripts/init first."
+    echo "Error: project_config.yml not found."
+    echo "Please configure project_config.yml or run os_scripts/init first."
     exit 1
 fi
 
@@ -74,13 +74,13 @@ run_doctor() {
     fi
 
     if [ ${#missing_params[@]} -gt 0 ]; then
-        echo "Doctor check failed. Missing or empty required configurations in os-template.yml:"
+        echo "Doctor check failed. Missing or empty required configurations in project_config.yml:"
         for param in "${missing_params[@]}"; do
             echo "  - ${param}"
         done
         exit 1
     else
-        echo "Doctor check passed. os-template.yml is correctly configured."
+        echo "Doctor check passed. project_config.yml is correctly configured."
         
         local proj_name=$(get_yaml_value "project.name")
         if [ "${proj_name}" = "YOUR_PROJECT_NAME" ] || [ -z "${proj_name}" ]; then
@@ -112,7 +112,7 @@ execute_command() {
         # host mode
         local host_setup=$(get_yaml_value "runtime.host_setup_steps")
         if [ -n "${host_setup}" ] && [ "${host_setup}" != "[]" ]; then
-            echo "Note: host_setup_steps is configured in os-template.yml. Ensure you have run them."
+            echo "Note: host_setup_steps is configured in project_config.yml. Ensure you have run them."
         fi
         eval "${cmd_str}"
     fi
@@ -128,7 +128,7 @@ show_help() {
     echo "  test         Run tests"
     echo "  build        Run build"
     echo "  ci           Run lint, typecheck (if configured), and test sequentially"
-    echo "  doctor       Check if os-template.yml is properly configured"
+    echo "  doctor       Check if project_config.yml is properly configured"
     echo "  print-config Print the parsed configuration"
     echo ""
 }
@@ -148,13 +148,13 @@ case "$COMMAND" in
         cmd_str=$(get_yaml_value "commands.${COMMAND}")
         if [ -n "${cmd_str}" ]; then
             if [ "${cmd_str}" = "echo 'skip'" ] || [ "${cmd_str}" = "echo \"skip\"" ]; then
-                echo "Skipping ${COMMAND} as configured in os-template.yml"
+                echo "Skipping ${COMMAND} as configured in project_config.yml"
                 exit 0
             fi
             echo "Running ${COMMAND}: ${cmd_str}"
             execute_command "${cmd_str}"
         else
-            echo "Error: commands.${COMMAND} is not configured in os-template.yml"
+            echo "Error: commands.${COMMAND} is not configured in project_config.yml"
             echo "Running doctor to show missing configurations:"
             run_doctor
             exit 1
@@ -185,7 +185,7 @@ case "$COMMAND" in
         fi
         ;;
     print-config)
-        echo "Parsed Configuration from os-template.yml:"
+        echo "Parsed Configuration from project_config.yml:"
         echo "--- project ---"
         echo "  project.name         : $(get_yaml_value 'project.name')"
         echo "  project.owner        : $(get_yaml_value 'project.owner')"

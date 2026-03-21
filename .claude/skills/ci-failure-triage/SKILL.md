@@ -59,7 +59,7 @@ CI が全ステップ PASS する
 - [ ] リグレッションテストが追加されている（該当する場合）
 
 ## Test Plan
-ローカルで `./scripts/run ci` を実行して確認
+ローカルで `./os_scripts/run ci` を実行して確認
 
 ## Commit Plan
 - Commit 1: 原因箇所の修正

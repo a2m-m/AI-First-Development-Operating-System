@@ -21,10 +21,10 @@ jobs:
       - name: Check Dependency Scan Enabled
         id: check-scan
         run: |
-          if [ -f "os-template.yml" ]; then
+          if [ -f "project_config.yml" ]; then
             ENABLED=$(python3 -c '
           import sys, re
-          for line in open("os-template.yml"):
+          for line in open("project_config.yml"):
               m = re.match(r"^\s+dependency_scan:\s*(true|false)", line)
               if m:
                   print(m.group(1).lower())
