@@ -114,7 +114,7 @@ execute_command() {
         if [ -n "${host_setup}" ] && [ "${host_setup}" != "[]" ]; then
             echo "Note: host_setup_steps is configured in project_config.yml. Ensure you have run them."
         fi
-        eval "${cmd_str}"
+        bash -c "${cmd_str}"
     fi
 }
 
