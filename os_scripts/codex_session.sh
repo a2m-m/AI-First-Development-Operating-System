@@ -42,6 +42,30 @@ check_codex() {
     fi
 }
 
+validate_session_id() {
+    local session_id="$1"
+    if [[ -z "${session_id}" ]]; then
+        echo "Error: session_id が空です。" >&2
+        exit 1
+    fi
+    # パストラバーサル防止: スラッシュや .. を禁止
+    if [[ "${session_id}" =~ [/\\] ]] || [[ "${session_id}" == *".."* ]]; then
+        echo "Error: session_id に無効な文字が含まれています: '${session_id}'" >&2
+        exit 1
+    fi
+}
+
+run_codex() {
+    local prompt="$1"
+    local response
+    if ! response="$(echo "${prompt}" | codex -q 2>&1)"; then
+        echo "Error: Codex の実行に失敗しました。" >&2
+        echo "  詳細: ${response}" >&2
+        exit 1
+    fi
+    echo "${response}"
+}
+
 session_log() {
     local session_id="$1"
     echo "${SESSIONS_DIR}/${session_id}.log"
@@ -92,6 +116,8 @@ cmd_start() {
     local session_id="$1"
     local context_file="$2"
 
+    validate_session_id "${session_id}"
+
     if [[ ! -f "${context_file}" ]]; then
         echo "Error: コンテキストファイル '${context_file}' が見つかりません。" >&2
         exit 1
@@ -128,7 +154,7 @@ cmd_start() {
 
     echo "--- Codex 初回応答 (session: ${session_id}) ---"
     local response
-    response="$(echo "${prompt}" | codex -q 2>&1)"
+    response="$(run_codex "${prompt}")"
     echo "${response}"
     echo "---"
 
@@ -143,6 +169,8 @@ cmd_reply() {
     local session_id="$1"
     local message="$2"
 
+    validate_session_id "${session_id}"
+
     local log_file
     log_file="$(require_session "${session_id}")"
 
@@ -152,7 +180,7 @@ cmd_reply() {
 
     echo "--- Codex 応答 (session: ${session_id}) ---"
     local response
-    response="$(echo "${prompt}" | codex -q 2>&1)"
+    response="$(run_codex "${prompt}")"
     echo "${response}"
     echo "---"
 
@@ -163,6 +191,8 @@ cmd_reply() {
 
 cmd_end() {
     local session_id="$1"
+
+    validate_session_id "${session_id}"
 
     local log_file
     log_file="$(require_session "${session_id}")"
