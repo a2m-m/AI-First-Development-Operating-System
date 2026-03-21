@@ -1,191 +1,242 @@
 ---
 name: project-setup
-description: テンプレート複製後のプロジェクト初期セットアップを確認・案内する。初期化状態・資材の存在・公開物の整理・GitHub接続を順にチェックする。
+description: テンプレート複製後のプロジェクト初期セットアップを確認・修正する。初期化状態・資材の存在・公開物の整理・GitHub接続を順にチェックし、問題があれば自動修正する。
 user-invocable: true
-allowed-tools: Read, Grep, Glob, Bash(git *), Bash(gh *)
+allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 ---
 
 # project-setup
 
 テンプレートを複製して新しいプロジェクトを始める際の初回セットアップスキル。
-削除・上書きは行わず、**状態確認と案内**に徹する。
+**チェックして問題があれば自動修正する。あるべき姿に初期化することが目的。**
+
+## 対象ディレクトリ
+
+**スキルは現在の作業ディレクトリ（`pwd`）を対象として実行する。**
+このスキルは新プロジェクトのディレクトリで実行すること。
+テンプレートリポジトリ上で実行した場合はテンプレート自身がチェック対象になるため注意。
 
 ## 実行フロー
 
-以下の4フェーズを順番に実行し、各フェーズの結果を報告する。
+以下の順に実行する。**Bashコマンドは逐次実行**（並列実行しない）。
 
 ---
 
-### Phase 1: 初期化チェック
+### Step 0: 現在状態の把握
 
-**目的:** `scripts/init` が実行済みか、プロジェクト固有情報が設定されているかを確認する。
+まず `pwd`、`git remote -v`、`project_config.yml` の内容を確認して現在の状態を把握する。
+その後、ユーザーに以下を一度に確認する（情報が不足している場合のみ）：
 
-1. `os-template.yml` を読み、以下のプレースホルダが残っていないか確認する：
-   - `name: "YOUR_PROJECT_NAME"` → 未置換なら **❌ 未初期化**
-   - `owner: "YOUR_TEAM_OR_OWNER"` → 未置換なら **❌ 未初期化**
-   - `docker_image: "your-image:tag"` → 未置換なら **⚠️ 要確認**
-
-2. `.ai-context.md` を読み、テンプレ固有の不要情報が混入していないか確認する：
-   - Active Issues テーブルが空（テンプレ由来のIssueが残っていない）
-   - Known pitfalls にテンプレ用の内容が残っていない
-   - Status が `works` または適切な初期状態になっている
-
-**未初期化の場合の案内:**
 ```
-./scripts/init を実行してプレースホルダを置換してください。
-  ./scripts/init  （対話モード）
+以下の情報を教えてください（すでに設定済みのものはスキップします）:
+1. プロジェクト名（project_config.yml の name に設定します）
+2. チーム / オーナー名（project_config.yml の owner に設定します）
+3. 新しい GitHub リポジトリ名（未設定の場合。例: my-project）
+4. 公開 / 非公開（public / private）
 ```
+
+情報が揃ったら以降のフェーズを実行する。
 
 ---
 
-### Phase 2: 資材チェック
+### Phase 1: プレースホルダ置換
 
-**目的:** 開発効率化・安定化の資材が新プロジェクトでも機能する状態にあるかを確認する。
+**目的:** `project_config.yml` のプレースホルダをプロジェクト固有情報に置換する。
 
-以下のファイル・ディレクトリの存在を確認する：
+チェック対象：
+- `name: "YOUR_PROJECT_NAME"` → ユーザーが入力したプロジェクト名に置換
+- `owner: "YOUR_TEAM_OR_OWNER"` → ユーザーが入力したオーナー名に置換
+- `docker_image: "your-image:tag"` → 未置換なら **⚠️ 要確認** として報告（自動置換はしない）
 
-| 資材 | パス | 重要度 |
+置換後に `.ai-context.md` を確認し、テンプレ由来のTODOコメントのみで埋まっている場合は
+以下のクリーンな初期状態に上書きする（`<!-- TODO:` で始まる全コメントをクリア）：
+
+```markdown
+# .ai-context.md
+
+AIエージェントが作業開始時に現在の状態・進行中Issue・次の手を把握するためのコンテキストファイル。
+**Project Instance では作業開始前に必ず読むこと。作業終了時に必ず更新すること。**
+
+---
+
+## 1. Status
+
+works（初期セットアップ完了）
+
+---
+
+## 2. Active Issues
+
+| Issue | 要点 | 担当 |
 |---|---|---|
-| スキル群 | `.claude/skills/` | 必須 |
-| Guardrailワークフロー | `.github/workflows/guardrail.yml` | 必須 |
-| CIワークフロー | `.github/workflows/ci.yml` | 必須 |
-| LCGワークフロー | `.github/workflows/lcg.yml` | 必須 |
-| Secretsチェック | `.github/workflows/secrets.yml` | 必須 |
-| 依存スキャン | `.github/workflows/dependency-scan.yml` | 推奨 |
-| run スクリプト | `scripts/run` | 必須 |
-| git hooks | `scripts/hooks/` | 推奨 |
-| Issueテンプレート | `.github/ISSUE_TEMPLATE/` | 必須 |
-| AIルール | `.ai-instructions.md` | 必須 |
-| Claude設定 | `.claude/CLAUDE.md` | 必須 |
-
-存在しないものは **❌ 欠損** として報告する。
 
 ---
 
-### Phase 3: 公開物チェック
+## 3. Decisions
 
-**目的:** リポジトリを公開・配布する際に、置くべきものと置かないものが整理されているかを確認する。
+| 日付 | 決定事項 | 理由 | 関連Issue |
+|---|---|---|---|
 
-#### 3-1. .gitignore チェック
+---
 
-以下が `.gitignore` に含まれているか確認する：
+## 4. Next actions
+
+1. `/issue-create feature <最初の機能>` で最初の Issue を作成する
+
+---
+
+## 5. Known pitfalls
+
+---
+
+## 6. Commands
+
+（`project_config.yml` の `commands.*` に従う）
+
+---
+
+## 7. CI Notes
+
+| 典型原因 | 対処法 | 最終発生 |
+|---|---|---|
+```
+
+---
+
+### Phase 2: 資材チェック・修正
+
+**目的:** 必要な資材を揃える。
+
+以下を1件ずつ逐次確認し、欠損していれば対処する：
+
+```bash
+test -e .claude/skills/ && echo "exist" || echo "missing"
+test -e .github/workflows/guardrail.yml && echo "exist" || echo "missing"
+# ...（以下同様）
+```
+
+| 資材 | パス | 重要度 | 欠損時の対処 |
+|---|---|---|---|
+| スキル群 | `.claude/skills/` | 必須 | テンプレ元から `cp -r` を案内。パスが分かる場合は自動コピー |
+| Guardrailワークフロー | `.github/workflows/guardrail.yml` | 必須 | 同上 |
+| CIワークフロー | `.github/workflows/ci.yml` | 必須 | 同上 |
+| LCGワークフロー | `.github/workflows/lcg.yml` | 必須 | 同上 |
+| Secretsチェック | `.github/workflows/secrets.yml` | 必須 | 同上 |
+| 依存スキャン | `.github/workflows/dependency-scan.yml` | 推奨 | 同上 |
+| run スクリプト | `os_scripts/run` | 必須 | 同上 |
+| git hooks | `os_scripts/hooks/` | 推奨 | 同上 |
+| Issueテンプレート | `.github/ISSUE_TEMPLATE/` | 必須 | 同上 |
+| AIルール | `.ai-instructions.md` | 必須 | 同上 |
+| Claude設定 | `.claude/CLAUDE.md` | 必須 | 同上 |
+
+**テンプレ元からのコピー方法（テンプレリポジトリのパスが判明している場合）:**
+```bash
+TMPL_DIR="<テンプレートリポジトリのパス>"
+cp -r "$TMPL_DIR/.claude/skills" .claude/
+cp "$TMPL_DIR/.github/workflows/guardrail.yml" .github/workflows/
+# ... 必要なファイルを個別にコピー
+```
+
+テンプレートリポジトリのパスが不明な場合はユーザーに確認する。
+
+---
+
+### Phase 3: 公開物の修正
+
+#### 3-1. .gitignore への必須エントリ追加
+
+`.gitignore` を読んで以下が含まれているか確認し、**不足分を末尾に追記する**：
 
 ```
-# 必須エントリ
+# OS Infrastructure（ローカル開発用、配布不要）
+.claude/
+os_scripts/
+os_docs/
+project_config.yml
+
+# 必須エントリ（project-setup により追加）
 .env
 .env.*
 .claude/settings.local.json
-
-# 推奨エントリ（言語により異なる）
-*.pyc / __pycache__    # Python
-node_modules/          # Node.js
 *.log
 ```
 
-不足しているエントリがあれば **⚠️ 要追加** として列挙する。
-
 #### 3-2. 秘匿ファイルの混入チェック
 
-以下のファイルがリポジトリに存在しかつ `.gitignore` に含まれていないものがないかを確認する：
-
 ```bash
-git ls-files | grep -E '(\.env$|\.env\.|credentials|secret|private_key|\.pem$|\.key$)'
+git ls-files | grep -E '(\.env$|\.env\.[^/]+$|credentials[^/]*$|private_key[^/]*$|\.pem$|\.key$)' || echo "none"
 ```
 
-検出されたファイルは **🚨 危険: コミット済みの秘匿ファイルの可能性** として警告する。
+`.github/workflows/` 配下のファイルはワークフロー定義のため除外して判定する。
+それ以外で検出されたファイルは **🚨 危険** として報告し、対処を案内する（自動削除はしない）。
 
-#### 3-3. 配布物の確認
+#### 3-3. README・LICENSE の確認
 
-公開リポジトリに**置くべきもの**（存在を確認）：
-- `README.md` — プロジェクト概要・セットアップ手順
-- `LICENSE` — ライセンス明記（なければ ⚠️ 要追加を案内）
-- `os-template.yml` — プロジェクト設定の唯一の入口
-
-公開リポジトリに**置かないもの**（もし存在する場合は案内）：
-- `docs/01_OS Overview.md` 等のテンプレOS設計ドキュメント → プロジェクト固有の `docs/` に置き換える
-- テンプレ由来の `docs/vision.md` / `docs/architecture.md` のTODO状態 → 記入を促す
+- `README.md` がなければ最小限のテンプレを生成する
+- `LICENSE` がなければライセンス種別をユーザーに確認し、生成する
 
 ---
 
-### Phase 4: GitHub接続チェック
+### Phase 4: GitHub 接続の修正
 
-**目的:** 元リポジトリの remote が残っていないか確認し、新プロジェクト用の接続状態に整理する。
+**目的:** 新プロジェクト用の remote に切り替える。
 
-1. `git remote -v` を実行して現在の remote を確認する
+1. `git remote -v` で現在の remote を確認する
 
-2. **remote が設定済みの場合（フォルダコピー由来の可能性がある）:**
-
-   - URL が元のテンプレートリポジトリ（`AI-First-Development-Operating-System` 等）を指していないか確認する
-   - 元リポジトリを向いている場合は **⚠️ 旧リポジトリへの接続が残っています** と警告し、以下を案内する：
-
+2. **remote が元テンプレートリポジトリを指している場合:**
+   - Step 0 で取得したリポジトリ名・公開設定を使い、以下を実行する：
    ```bash
-   # 旧 remote を削除する
    git remote remove origin
-
-   # 新しいリポジトリを作成して接続する場合
-   gh repo create <新プロジェクト名> --public   # または --private
+   gh repo create <新プロジェクト名> --public  # または --private
    git remote add origin <新リポジトリのURL>
    git push -u origin main
-
-   # 既存の別リポジトリに接続する場合
-   git remote add origin <接続先URL>
-   git push -u origin main
    ```
 
-3. **remote未設定の場合:**
-   ```bash
-   # 新しいリポジトリを作成して接続する場合
-   gh repo create <新プロジェクト名> --public   # または --private
-   git remote add origin <URL>
-   git push -u origin main
-
-   # 既存リポジトリに接続する場合
-   git remote add origin <接続先URL>
-   git push -u origin main
-   ```
+3. **remote が未設定の場合:**
+   - 同様に新リポジトリを作成して接続する
 
 4. **remote が正しく設定済みの場合:**
-   - `git log --oneline -3` で直近のコミット履歴を確認し、コピー元の履歴が混入していないか提示する（情報提示のみ。削除は行わない）
+   - `git log --oneline -3` で直近のコミット履歴を提示し（情報提示のみ）、問題がないか確認する
 
-5. `gh auth status` を実行してgh CLIの認証状態を確認する
+5. `gh auth status` で認証状態を確認する
 
 ---
 
 ## 出力フォーマット
 
 ```
-## project-setup チェック結果
+## project-setup 完了レポート
 
-### Phase 1: 初期化
-- os-template.yml: [✅ 初期化済み | ❌ 未初期化]
-- .ai-context.md: [✅ クリーン | ⚠️ 要確認: <内容>]
+### Phase 1: プレースホルダ置換
+- project_config.yml: [✅ 置換済み | ⚠️ 一部未置換: <項目>]
+- .ai-context.md: [✅ クリーン状態に初期化 | ✅ 既にクリーン]
 
 ### Phase 2: 資材
-- スキル群: [✅ 存在 | ❌ 欠損]
-- ワークフロー: [✅ 全て存在 | ❌ 欠損: <ファイル名>]
+- スキル群: [✅ 存在 | ✅ コピー済み | ❌ 欠損（要手動対応）]
+- ワークフロー: [✅ 全て存在 | ✅ コピー済み | ❌ 欠損: <ファイル名>]
 - ...
 
 ### Phase 3: 公開物
-- .gitignore: [✅ 適切 | ⚠️ 不足: <エントリ>]
-- 秘匿ファイル: [✅ なし | 🚨 検出: <ファイル名>]
-- README: [✅ 存在 | ❌ 欠損]
-- LICENSE: [✅ 存在 | ⚠️ 未設定]
+- .gitignore: [✅ 適切 | ✅ 追記済み: <エントリ>]
+- 秘匿ファイル: [✅ なし | 🚨 検出: <ファイル名>（要手動対応）]
+- README: [✅ 存在 | ✅ 生成済み]
+- LICENSE: [✅ 存在 | ✅ 生成済み | ⚠️ 未設定（ユーザー判断待ち）]
 
 ### Phase 4: GitHub接続
-- remote: [✅ 新リポジトリに接続済み (<URL>) | ⚠️ 元リポジトリへの接続が残存 (<URL>) | ❌ 未設定]
+- remote: [✅ 新リポジトリに接続済み (<URL>) | ✅ 切り替え済み | ❌ 未設定]
 - gh CLI: [✅ 認証済み | ❌ 未認証]
 
 ---
 
-### 対応が必要な項目
-1. ...（❌/🚨/⚠️ の項目のみ列挙し、対処手順を案内）
+### 残タスク（自動修正できなかった項目）
+1. ...
 
 ### 次のステップ
-...（全てクリアな場合は最初のIssue作成を促す）
+- 全て完了: `/issue-create feature <最初の機能>` で開発を開始する
 ```
 
-## ルール
+## 修正の原則
 
-- ファイルの削除・上書きは行わない（読み取り専用）
-- 問題を検出した場合はコマンドを提示するが、実行はユーザーの判断に委ねる
-- 全チェック通過後は `/issue-create feature <最初の機能>` で開発開始を促す
+- **自動修正してよいもの**: プレースホルダ置換、.gitignore エントリ追記、.ai-context.md リセット、資材のコピー（テンプレパス判明時）、GitHub remote の切り替え
+- **ユーザー確認が必要なもの**: 秘匿ファイルの削除・git履歴の書き換え、`docker_image` 等プロジェクト固有の設定値
+- **実行前に確認すること**: `git remote remove` / `gh repo create` / `git push` など外部に影響する操作は実行前にユーザーに内容を提示し承認を得る
