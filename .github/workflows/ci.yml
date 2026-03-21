@@ -24,7 +24,7 @@ jobs:
           python3 -m pip install -r requirements.txt
 
       - name: Run OS self-tests
-        run: python3 -m unittest discover -s os_scripts -p '*test.py' -v
+        run: python3 -m unittest discover -s .github/scripts -p '*test.py' -v
 
   ci:
     runs-on: ubuntu-latest
@@ -61,8 +61,8 @@ jobs:
 
       - name: Run Doctor
         if: steps.check-ci.outputs.enabled == 'true'
-        run: ./os_scripts/run doctor
+        run: ./.github/scripts/run doctor
 
       - name: Run CI
         if: steps.check-ci.outputs.enabled == 'true'
-        run: ./os_scripts/run ci
+        run: ./.github/scripts/run ci

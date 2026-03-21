@@ -9,7 +9,7 @@ set -e
 # It provides a unified command set for both local development and CI.
 # =============================================================================
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONFIG_FILE="${ROOT_DIR}/project_config.yml"
 REQUIREMENTS_FILE="${ROOT_DIR}/requirements.txt"
 
@@ -19,7 +19,7 @@ REQUIREMENTS_FILE="${ROOT_DIR}/requirements.txt"
 # -----------------------------------------------------------------------------
 get_yaml_value() {
     local key_path="$1"
-    python3 "${ROOT_DIR}/os_scripts/lib/config.py" "${CONFIG_FILE}" "${key_path}"
+    python3 "${ROOT_DIR}/.github/scripts/lib/config.py" "${CONFIG_FILE}" "${key_path}"
 }
 
 ensure_python_dependencies() {
