@@ -6,6 +6,12 @@ labels: bug
 assignees: ''
 ---
 
+## Related Issues
+<!-- 同じ機能グループ（認証・UIデザイン・CI など）に属する Issue を列挙する -->
+<!-- scope/xxx ラベルも付与すること（例: scope/auth, scope/design, scope/ci） -->
+- Related: #
+<!-- 関連がない場合は "なし" と書く -->
+
 ## Repro Steps（再現手順）
 <!-- 誰でも再現できる最小手順を書く -->
 1.
