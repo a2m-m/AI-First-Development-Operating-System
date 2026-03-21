@@ -134,7 +134,6 @@ test -e .github/workflows/guardrail.yml && echo "exist" || echo "missing"
 | run スクリプト（ローカル） | `os_scripts/run` | 推奨 | 同上 |
 | git hooks | `os_scripts/hooks/` | 推奨 | 同上 |
 | Issueテンプレート | `.github/ISSUE_TEMPLATE/` | 必須 | 同上 |
-| AIルール | `.ai-instructions.md` | 必須 | 同上 |
 | Claude設定 | `.claude/CLAUDE.md` | 必須 | 同上 |
 
 **テンプレ元からのコピー方法（テンプレリポジトリのパスが判明している場合）:**

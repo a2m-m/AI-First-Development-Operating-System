@@ -18,7 +18,7 @@ Issue の品質が実装の成功率を決める。
    - `bug` → `.github/ISSUE_TEMPLATE/bug.md` を参照
    - 未指定 → ユーザーに確認
 
-2. `.ai-instructions.md` §1 のルールに従う：
+2. `CLAUDE.md` §ISSUE作成ルール に従う：
    - **再現・方針・AC・Non-goals・Commit Plan** が明記されていること
    - Acceptance Criteria が **Yes/No で判定できる形** になっていること
    - Commit Plan で実装を **1〜3コミット** に分割していること

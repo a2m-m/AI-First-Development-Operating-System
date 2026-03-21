@@ -1,6 +1,40 @@
-# Claude Code 固有ルール
+# Claude Code ルール
 
-共通ルール: @../.ai-instructions.md
+---
+
+## ISSUE 作成ルール（最重要）
+
+**ISSUE を作成する際は、必ず `.github/ISSUE_TEMPLATE/` のテンプレートを使うこと。**
+
+- 新機能・改善 → `.github/ISSUE_TEMPLATE/feature.md` を使う
+- バグ修正 → `.github/ISSUE_TEMPLATE/bug.md` を使う
+- テンプレートの全セクションを埋める（空のまま残さない）
+- `gh issue create` を使う場合は `--template` オプションでテンプレートを指定するか、テンプレートの内容を `--body` に反映する
+
+### ISSUE は"命令書"として機能させる
+
+ISSUE の品質が実装の成功率を決める（P2: Issue-Driven Development）。
+以下が揃った ISSUE を作ること：
+
+- **再現・方針・AC・Non-goals・Commit Plan** が明記されている
+- Acceptance Criteria が Yes/No で判定できる形になっている
+- Commit Plan で実装を 1〜3 コミットに分割している
+
+---
+
+## 言語ルール
+
+**GitHub 上のすべての記述は日本語で統一すること。**
+
+対象：
+- コミットメッセージ（タイトル・本文ともに日本語。フォーマット等の規約は `docs/commit_strategy.md` に従うこと）
+- Issue タイトル・本文
+- PR タイトル・本文
+- コードレビューコメント・Issue コメント
+
+例外：
+- コード・変数名・コマンド・固有名詞（ライブラリ名、ブランチ名など）はそのまま英語でよい
+- ログ出力やエラーメッセージなど、実装上英語が必要な箇所は除く
 
 ---
 
@@ -51,13 +85,41 @@
 
 ---
 
+## 実装ルール
+
+- **Template のコントラクトを壊さない**：ワークフロー・スクリプト本体を勝手に改造しない
+- **Issue の AC を満たす実装をする**：スコープを逸脱しない
+- **設定は `project_config.yml` に寄せる**：言語・ツール固有の差分はここで吸収する
+- **勝手に巨大改修をしない**：Issue に書かれていないことは実装しない
+- **Skills は Template 還元が原則**：Instance で Template のスキルを改造しない
+
+---
+
+## PR ルール
+
+- **小さく分けて PR**：1PR = 1 Issue を原則とする
+- **PR は Issue に紐づける**：`Closes #<issue番号>` を本文に記載する
+- **Template のコントラクトを壊さない**
+
+---
+
+## コンテキスト管理
+
+- **作業開始前**：`.ai-context.md` を読んで現在の状態・次の手を把握する
+- **作業終了後**：`.ai-context.md` を更新し、次のセッションが迷子にならない状態にする
+- **OS Template Repo では雛形を維持**：このリポジトリ自体が Template Repo の場合、`.ai-context.md` に個別案件の Issue / PR 状態を書き込まない
+- **決定事項**：仕様・方針の決定は Issue へ記録する
+- **CI 失敗・テスト失敗**：原因を Issue に残し、教材として活用する（消さない）
+
+---
+
 ## 設計原則
 
 ### SRP（単一責任原則）
 
 - 1 関数 / クラス / モジュールの責務が膨らんでいると感じたら分割を検討すること（ただし過分割は避ける）
 - 1 スキル = 1 責務を目安とし、複数の目的を詰め込まないこと
-- **1 PR = 1 Issue**：複数の変更を一度に混ぜないこと（`.ai-instructions.md` §4）
+- **1 PR = 1 Issue**：複数の変更を一度に混ぜないこと
 - 既存コードの責務境界を壊す変更を発見した場合は、別 Issue として起票すること
 
 ### コンテキスト肥大化の防止
@@ -104,25 +166,20 @@
 
 ---
 
-## Skills
+## 禁止事項
 
-以下のスキルは `/スキル名` で起動する。Claude 専用のものはユーザーが呼ばない。
+- ISSUE テンプレートを使わずに Issue を作ること
+- 日本語以外の言語でコミットメッセージ・Issue・PR を書くこと
+- Template のワークフロー・スクリプト本体を改造すること
+- `project_config.yml` 以外の場所に設定を散在させること
+- Issue に書かれていないスコープの実装を勝手に行うこと
+- `.ai-context.md` を更新せずに作業を終了すること
 
-| コマンド | 用途 | 引数例 | 起動者 |
-|---|---|---|---|
-| `/plan` | Issue AC 確認 → コード探索 → 実装計画立案 | — | Claude（自動） |
-| `/issue-create` | テンプレ準拠の命令書 Issue を作成 | `feature <タイトル>` | ユーザー |
-| `/issue-lint` | Issue の品質チェック（AC・Commit Plan・空セクション） | `[Issue番号]` | ユーザー |
-| `/review` | Issue AC に基づく PR / 成果物レビュー | `[Issue番号 または PR番号]` | ユーザー / Claude（自己レビュー） |
-| `/gate` | Pre-Push Gate 実行 + 結果解釈 | — | ユーザー / Claude（自動） |
-| `/commit-lint` | コミットメッセージ規約チェック | — | ユーザー |
-| `/pr-complete` | PRマージ後に `.ai-context.md` を更新 | `<PR番号>` | ユーザー |
-| `/ci-failure-triage` | CI失敗を解析して Bug Issue を自動作成 | — | ユーザー |
-| `/release-notes` | タグ間の変更からリリースノートを生成 | — | ユーザー |
-| `/skill-create` | 反復作業を新しいスキルとして定義 | `<名前> <理由>` | ユーザー |
-| `/project-setup` | テンプレ複製後の初期セットアップ確認（初期化・資材・公開物・GitHub接続） | — | ユーザー |
-| `/istart` | 次に着手すべき Issue を自動判断してブランチ作成・計画立案まで一気通貫で実行 | — | ユーザー |
-| `context-sync` | `.ai-context.md` を読んで状態同期 | — | **Claude 専用（セッション開始時に自動実行）** |
+---
+
+## ルールファイルの更新基準
+
+ユーザーからルールの追加・修正を求められた場合、このファイル（`.claude/CLAUDE.md`）を編集すること。
 
 ---
 
@@ -172,6 +229,42 @@ main        ← 公開物のみ（GitHub に push する）
 
 ---
 
+## Skills
+
+以下のスキルは `/スキル名` で起動する。Claude 専用のものはユーザーが呼ばない。
+
+| コマンド | 用途 | 引数例 | 起動者 |
+|---|---|---|---|
+| `/plan` | Issue AC 確認 → コード探索 → 実装計画立案 | — | Claude（自動） |
+| `/issue-create` | テンプレ準拠の命令書 Issue を作成 | `feature <タイトル>` | ユーザー |
+| `/issue-lint` | Issue の品質チェック（AC・Commit Plan・空セクション） | `[Issue番号]` | ユーザー |
+| `/review` | Issue AC に基づく PR / 成果物レビュー | `[Issue番号 または PR番号]` | ユーザー / Claude（自己レビュー） |
+| `/gate` | Pre-Push Gate 実行 + 結果解釈 | — | ユーザー / Claude（自動） |
+| `/commit-lint` | コミットメッセージ規約チェック | — | ユーザー |
+| `/pr-complete` | PR マージ後に `.ai-context.md` を更新 | `<PR番号>` | ユーザー |
+| `/ci-failure-triage` | CI 失敗を解析して Bug Issue を自動作成 | — | ユーザー |
+| `/release-notes` | タグ間の変更からリリースノートを生成 | — | ユーザー |
+| `/skill-create` | 反復作業を新しいスキルとして定義 | `<名前> <理由>` | ユーザー |
+| `/project-setup` | テンプレ複製後の初期セットアップ確認（初期化・資材・公開物・GitHub接続） | — | ユーザー |
+| `/istart` | 次に着手すべき Issue を自動判断してブランチ作成・計画立案まで一気通貫で実行 | — | ユーザー |
+| `context-sync` | `.ai-context.md` を読んで状態同期 | — | **Claude 専用（セッション開始時に自動実行）** |
+
+---
+
+## 参照ドキュメント
+
+| ドキュメント | 用途 |
+|---|---|
+| `01_OS Overview.md` | OS の思想・原則・全体像（地図） |
+| `02_OS_Template_Spec.md` | Template Repo の仕様（設計図） |
+| `03_Project_Instance_Guide.md` | Instance の立ち上げ手順（手順書） |
+| `docs/commit_strategy.md` | コミットメッセージ規約と巨大 diff 警告の仕様 |
+| `.github/ISSUE_TEMPLATE/feature.md` | 新機能・改善 ISSUE のテンプレート |
+| `.github/ISSUE_TEMPLATE/bug.md` | バグ修正 ISSUE のテンプレート |
+| `.ai-context.md` | 現在の状態・進行中 Issue・次の手 |
+
+---
+
 ## 環境前提
 
 以下が利用可能であることを前提とする：
@@ -180,5 +273,3 @@ main        ← 公開物のみ（GitHub に push する）
 - `gh` CLI（認証済み）
 - `git`
 - Python 3
-
-コンテキスト管理: `.ai-instructions.md` §5 参照
