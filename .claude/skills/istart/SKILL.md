@@ -17,7 +17,7 @@ allowed-tools: Read, Bash(gh issue list *), Bash(gh issue view *), Bash(git chec
 - 現在の Status（works / broken）
 - Active Issues（すでに進行中のものがないか）
 - Completed（完了済みの Issue 番号）
-- Next actions（推奨されている次の手）
+- Next actions — **scope サブセクションごとに読む**（`← 次の着手点` が付いた Issue を優先候補とする）
 
 ### 2. オープン Issue を取得
 
@@ -28,8 +28,9 @@ gh issue list --state open --limit 50 --json number,title,labels,milestone,assig
 取得したリストから **着手すべき Issue** を以下の優先順位で選ぶ：
 
 1. `.ai-context.md` の `Next actions` に明示されているもの
-2. 依存 Issue がすべて完了しているもの（本文の "依存" / "Depends on" を確認）
-3. Issue 番号が若いもの（小さい数字 = 古い Issue = 先行依存を満たしている可能性が高い）
+2. 直前の Active Issue と同じ `scope/xxx` ラベルを持つもの（同機能グループを優先してまとめて潰す）
+3. 依存 Issue がすべて完了しているもの（本文の "依存" / "Depends on" を確認）
+4. Issue 番号が若いもの（小さい数字 = 古い Issue = 先行依存を満たしている可能性が高い）
 
 **スキップ条件（以下は選ばない）**：
 - すでに Active Issues に含まれている（進行中）
@@ -48,6 +49,14 @@ Issue の以下を把握する：
 - Acceptance Criteria（AC）
 - Non-goals
 - Commit Plan（実装コミット分割）
+- Related Issues（本文の `## Related Issues` セクション）
+- `scope/xxx` ラベル
+
+**同グループ Issue の特定**：
+選定した Issue が `scope/xxx` ラベルを持つ場合、同じラベルを持つ他のオープン Issue を列挙し、作業計画に含める。
+```
+gh issue list --state open --label "scope/<xxx>" --json number,title,labels
+```
 
 ### 4. ブランチを作成して作業開始
 
@@ -81,9 +90,16 @@ git checkout -b feature/issue-<number>
 
 ### Issue 概要
 - タイトル: ...
+- scope: `scope/xxx`（または なし）
 - AC:
   - [ ] ...
   - [ ] ...
+
+### 同グループの関連 Issue（scope/xxx）
+<!-- scope ラベルがある場合のみ表示。istart で次に着手する候補 -->
+| # | タイトル | 状態 |
+|---|---|---|
+| #N | ... | open |
 
 ### 実装計画
 ...

@@ -29,9 +29,31 @@ allowed-tools: Read, Grep, Glob, Bash(gh issue list *)
 
 - 今回の作業で変更した内容
 - 新たに発生した Decision
-- 次にやるべきこと（Next actions）
+- 次にやるべきこと（Next actions）— **scope ごとにセクション分けして書く（下記フォーマット参照）**
 - 踏んだ罠や注意点（Known pitfalls）
 - CI の状態変化
+
+## Next actions フォーマット
+
+`## 4. Next actions` は scope（機能グループ）ごとのサブセクションで構造化する。
+
+```markdown
+## 4. Next actions
+
+### scope/xxx（グループ名）
+- [ ] #N タイトル ← 次の着手点
+- [ ] #M タイトル（#N 完了後）
+- [ ] #P タイトル（#N #M 完了後）
+
+### 単発タスク
+- [ ] <Issue に紐づかない手順や確認事項>
+```
+
+**ルール：**
+- `scope/xxx` ラベルを持つ Issue は対応するサブセクションにまとめる
+- ラベルのない Issue や手順は `### 単発タスク` に入れる
+- 次に着手すべきものに `← 次の着手点` を付ける
+- 完了した Issue は削除（または `- [x]`）する
 
 ## ルール
 
