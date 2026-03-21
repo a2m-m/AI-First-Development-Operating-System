@@ -23,7 +23,7 @@ MOCK_README = """# Template Repo
 > **YOUR_PROJECT_NAME** — YOUR_TEAM_OR_OWNER
 
 ## 2. Quickstart
-./scripts/init \\
+./os_scripts/init \\
   --project-name YOUR_PROJECT_NAME \\
   --owner YOUR_TEAM_OR_OWNER
 """
@@ -37,7 +37,7 @@ MOCK_AI_CONTEXT = """# .ai-context.md
 | 補足 | `TODO: 状態の補足（例：CI緑、テスト未整備、etc.）` |
 
 ## 6. Commands
-<!-- TODO: プロジェクトで使用するコマンドを記載する。os-template.yml の commands.* と対応させる -->
+<!-- TODO: プロジェクトで使用するコマンドを記載する。project_config.yml の commands.* と対応させる -->
 """
 
 class TestInitScript(unittest.TestCase):
@@ -45,7 +45,7 @@ class TestInitScript(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         
         # Write isolated fixtures
-        self.config_file = os.path.join(self.temp_dir, "os-template.yml")
+        self.config_file = os.path.join(self.temp_dir, "project_config.yml")
         self.readme_file = os.path.join(self.temp_dir, "README.md")
         self.ai_context_file = os.path.join(self.temp_dir, ".ai-context.md")
         
@@ -58,7 +58,7 @@ class TestInitScript(unittest.TestCase):
         
         # Load the init script module dynamically
         repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        loader = importlib.machinery.SourceFileLoader('init_module', os.path.join(repo_dir, 'scripts', 'init'))
+        loader = importlib.machinery.SourceFileLoader('init_module', os.path.join(repo_dir, 'os_scripts', 'init'))
         spec = importlib.util.spec_from_loader(loader.name, loader)
         self.init_module = importlib.util.module_from_spec(spec)
         loader.exec_module(self.init_module)
@@ -96,7 +96,7 @@ class TestInitScript(unittest.TestCase):
         with open(self.init_module.AI_CONTEXT_FILE, 'r', encoding='utf-8') as f:
             content = f.read()
             self.assertIn('| 全体 | `works` |', content)
-            self.assertIn('INSTRUCTOR NOTE: scripts/init 経由で初期化されました', content)
+            self.assertIn('INSTRUCTOR NOTE: os_scripts/init 経由で初期化されました', content)
 
     @patch('sys.argv', ['init', '--project-name', 'TestApp', '--owner', 'testuser', '--runtime-mode', 'docker'])
     def test_missing_docker_image(self):

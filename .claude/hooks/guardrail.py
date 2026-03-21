@@ -7,14 +7,19 @@ import shlex
 import re
 from functools import lru_cache
 
-# デフォルトの機密ファイル遮断パターン（os-template.yml 未設定時のフォールバック）
+# デフォルトの機密ファイル遮断パターン（project_config.yml 未設定時のフォールバック）
 _DEFAULT_BLOCKED_PATTERNS = [
     ".env",
     ".env.*",
     "**/.env",
     "**/.env.*",
     "credentials*",
+    "**/credentials*",
+    "secret*",
     "**/secret*",
+    "**/.secret*",
+    "**/secrets.json",
+    "**/secrets.yaml",
 ]
 
 _SHELL_OPERATORS = {
@@ -53,15 +58,16 @@ def _compile_blocked_patterns(patterns):
 
     return compiled
 
+
 def _load_blocked_patterns():
-    """os-template.yml から security.blocked_file_patterns を読み込む。
+    """project_config.yml から security.blocked_file_patterns を読み込む。
     未設定・読み込み失敗時はデフォルトパターンを返す。"""
     try:
         hooks_dir = os.path.dirname(os.path.abspath(__file__))
         claude_dir = os.path.dirname(hooks_dir)
         repo_root = os.path.dirname(claude_dir)
-        scripts_lib = os.path.join(repo_root, "scripts", "lib")
-        os_template = os.path.join(repo_root, "os-template.yml")
+        scripts_lib = os.path.join(repo_root, "os_scripts", "lib")
+        os_template = os.path.join(repo_root, "project_config.yml")
 
         sys.path.insert(0, scripts_lib)
         from config import get_value

@@ -24,7 +24,7 @@ jobs:
           python3 -m pip install -r requirements.txt
 
       - name: Run OS self-tests
-        run: python3 -m unittest discover -s scripts -p '*test.py' -v
+        run: python3 -m unittest discover -s os_scripts -p '*test.py' -v
 
   ci:
     runs-on: ubuntu-latest
@@ -45,10 +45,10 @@ jobs:
       - name: Check CI Enabled
         id: check-ci
         run: |
-          if [ -f "os-template.yml" ]; then
+          if [ -f "project_config.yml" ]; then
             ENABLED=$(python3 -c '
           import sys, re
-          for line in open("os-template.yml"):
+          for line in open("project_config.yml"):
               m = re.match(r"^\s+ci:\s*(true|false)", line)
               if m:
                   print(m.group(1).lower())
@@ -61,8 +61,8 @@ jobs:
 
       - name: Run Doctor
         if: steps.check-ci.outputs.enabled == 'true'
-        run: ./scripts/run doctor
+        run: ./os_scripts/run doctor
 
       - name: Run CI
         if: steps.check-ci.outputs.enabled == 'true'
-        run: ./scripts/run ci
+        run: ./os_scripts/run ci

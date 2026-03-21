@@ -25,12 +25,12 @@ jobs:
       - name: Check if LCG is enabled
         id: check
         run: |
-          if awk '/^features:/ {in_features=1} /^policy:/ {in_features=0} in_features && /^[[:space:]]*lcg:[[:space:]]*true/ {found=1} END {exit !found}' os-template.yml; then
+          if awk '/^features:/ {in_features=1} /^policy:/ {in_features=0} in_features && /^[[:space:]]*lcg:[[:space:]]*true/ {found=1} END {exit !found}' project_config.yml; then
             echo "enabled=true" >> $GITHUB_OUTPUT
-            echo "LCG is enabled in os-template.yml."
+            echo "LCG is enabled in project_config.yml."
           else
             echo "enabled=false" >> $GITHUB_OUTPUT
-            echo "LCG is disabled in os-template.yml. Skipping."
+            echo "LCG is disabled in project_config.yml. Skipping."
           fi
 
       - name: Install Python dependencies
@@ -62,4 +62,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          python3 scripts/lcg
+          python3 os_scripts/lcg

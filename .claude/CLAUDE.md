@@ -18,7 +18,7 @@
 1. `context-sync` を実行し `.ai-context.md` の「次の手」セクションと open Issues を確認すること
 2. アクティブ Issue の AC・Non-goals・Commit Plan を読むこと
 3. Issue が `/issue-lint` チェック済みかを確認すること
-4. 初回または CI 失敗後は `./scripts/run doctor` で環境を確認すること
+4. 初回または CI 失敗後は `./os_scripts/run doctor` で環境を確認すること
 
 ---
 
@@ -80,7 +80,7 @@
 2. 実装（Executor モード）
 3. `/review [Issue番号 または PR番号]` を実行（QA/Architect モード）— **必須ステップ**
 4. BLOCKER/HIGH 指摘があれば修正（`/review` 出力の Severity 区分）
-5. `/gate`（`./scripts/run ci`）
+5. `/gate`（`./os_scripts/run ci`）
 6. コミット・プッシュ・PR 作成
 
 ---
@@ -129,7 +129,7 @@
 
 以下が利用可能であることを前提とする：
 
-- `./scripts/run`（lint / test / ci / doctor）
+- `./os_scripts/run`（lint / test / ci / doctor）
 - `gh` CLI（認証済み）
 - `git`
 - Python 3

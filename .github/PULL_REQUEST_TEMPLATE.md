@@ -6,10 +6,10 @@ Closes #<番号>
 
 ## How to test
 
-<!-- テスト手順を書く。`scripts/run` のコマンドを使うこと -->
+<!-- テスト手順を書く。`os_scripts/run` のコマンドを使うこと -->
 
 ```bash
-./scripts/run ci
+./os_scripts/run ci
 ```
 
 ## Risk / Rollback

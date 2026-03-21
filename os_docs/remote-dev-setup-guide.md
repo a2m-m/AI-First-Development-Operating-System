@@ -141,10 +141,10 @@ cd ~/path/to/your-project && claude
 
 ```bash
 # 環境依存チェック
-./scripts/run doctor
+./os_scripts/run doctor
 
 # CI を通しておく
-./scripts/run ci
+./os_scripts/run ci
 ```
 
 ### 出先での作業開始
@@ -164,7 +164,7 @@ Claude Code 内での典型的なフロー：
 2. /plan でプランモードに入り実装方針を確認
 3. 実装
 4. /review で自己レビュー
-5. /gate（./scripts/run ci）
+5. /gate（./os_scripts/run ci）
 6. コミット・プッシュ・PR 作成
 ```
 

@@ -39,7 +39,7 @@ AI（Claude Code）× GitHub を前提に、速度と安全性を両立しなが
 新規プロジェクトの開始は次の流れを標準とする：
 
 1. OS Template Repo を GitHub Template として新規リポジトリを作成  
-2. clone して `scripts/init` を実行  
+2. clone して `os_scripts/init` を実行  
 3. Phase 0（準備完了条件：DoR）を満たす（CIが走る/最低限の安全/教育フォーマット）  
 4. 最小縦切りIssueで ①〜⑥ を1周し、運用を開始  
 5. 詰まりはOSへ還元してチューニング（テンプレも育てる）  

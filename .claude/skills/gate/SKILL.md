@@ -2,7 +2,7 @@
 name: gate
 description: Pre-Push Gate を実行する。lint / typecheck / test を走らせ、結果を解釈して次の手を提示する。
 disable-model-invocation: true
-allowed-tools: Bash(./scripts/run *), Read
+allowed-tools: Bash(./os_scripts/run *), Read
 ---
 
 # Pre-Push Gate
@@ -11,7 +11,7 @@ push 前に品質ゲートを通す（P4: Gates over Hope）。
 
 ## 手順
 
-1. `./scripts/run ci` を実行する（lint → typecheck → test）
+1. `./os_scripts/run ci` を実行する（lint → typecheck → test）
 
 2. 結果を解釈する：
    - **全て成功** → 「Gate PASS: push 可能です」と報告
@@ -39,5 +39,5 @@ push 前に品質ゲートを通す（P4: Gates over Hope）。
 
 ## ルール
 
-- `scripts/run` が存在しない場合は `./scripts/run doctor` の実行を提案する
+- `os_scripts/run` が存在しない場合は `./os_scripts/run doctor` の実行を提案する
 - typecheck が空（skip）の場合は警告しない（プロジェクト事情として許容）

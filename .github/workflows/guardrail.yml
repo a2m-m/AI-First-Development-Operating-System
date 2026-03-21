@@ -26,12 +26,12 @@ jobs:
       - name: Check if guardrail is enabled
         id: check
         run: |
-          if awk '/^features:/ {in_features=1} /^policy:/ {in_features=0} in_features && /^[[:space:]]*guardrail:[[:space:]]*true/ {found=1} END {exit !found}' os-template.yml; then
+          if awk '/^features:/ {in_features=1} /^policy:/ {in_features=0} in_features && /^[[:space:]]*guardrail:[[:space:]]*true/ {found=1} END {exit !found}' project_config.yml; then
             echo "enabled=true" >> $GITHUB_OUTPUT
-            echo "Guardrail is enabled in os-template.yml."
+            echo "Guardrail is enabled in project_config.yml."
           else
             echo "enabled=false" >> $GITHUB_OUTPUT
-            echo "Guardrail is disabled in os-template.yml. Skipping."
+            echo "Guardrail is disabled in project_config.yml. Skipping."
           fi
 
       - name: Install Python dependencies
@@ -63,4 +63,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          python3 scripts/guardrail
+          python3 os_scripts/guardrail
