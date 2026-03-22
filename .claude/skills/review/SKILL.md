@@ -92,6 +92,8 @@ SESSION_ID="review-$(date +%s)"
 ./os_scripts/codex_session.sh start "${SESSION_ID}" "${CONTEXT_FILE}"
 ```
 
+> **注意**: `start` コマンドが成功した後にエラーが発生した場合は、必ず「エラー時クリーンアップ手順」を実行してから停止すること。
+
 Codex の初回応答を読み、以下を判断する：
 
 - **質問を含む** → ステップ 4（双方向質疑）へ
@@ -171,10 +173,21 @@ gh issue comment <Issue番号> --body "<レビュー結果全文>"
 rm "${CONTEXT_FILE}"
 ```
 
+## エラー時クリーンアップ手順
+
+`./os_scripts/codex_session.sh start` が成功した後にエラーが発生した場合は、以下を必ず実行してから停止すること：
+
+```bash
+./os_scripts/codex_session.sh end "${SESSION_ID}"
+rm "${CONTEXT_FILE}"
+```
+
+その後、エラー内容をユーザーに報告する。
+
 ## ルール
 
 - `os_scripts/codex_session.sh` が存在しない場合は **必ずエラーを出して停止する**（Codex 基盤なしでは動作不可）
 - Codex への質問応答は **最大 5 往復** とする
 - レビュー結果は **必ず日本語** で出力する
-- セッション終了（`end`）は途中エラーが発生しても **必ず実行する**
+- セッション終了（`end`）は途中エラーが発生しても **必ず実行する**（エラー時クリーンアップ手順を参照）
 - 一時コンテキストファイルはセッション終了後に削除する
