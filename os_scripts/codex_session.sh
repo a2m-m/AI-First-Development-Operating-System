@@ -21,6 +21,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SESSIONS_DIR="${SCRIPT_DIR}/codex_sessions"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+AGENTS_MD="${REPO_ROOT}/AGENTS.md"
 
 # ---------------------------------------------------------------------------
 # ヘルパー
@@ -28,9 +30,12 @@ SESSIONS_DIR="${SCRIPT_DIR}/codex_sessions"
 
 usage() {
     echo "Usage:"
-    echo "  $(basename "$0") start <session_id> <context_file>"
+    echo "  $(basename "$0") [--no-inject] start <session_id> <context_file>"
     echo "  $(basename "$0") reply <session_id> \"<message>\""
     echo "  $(basename "$0") end   <session_id>"
+    echo ""
+    echo "Options:"
+    echo "  --no-inject  AGENTS.md を system prompt に注入しない（CLI 自動参照時の二重注入防止）"
     exit 1
 }
 
@@ -81,6 +86,12 @@ require_session() {
     echo "${log_file}"
 }
 
+load_agents_md() {
+    if [[ -f "${AGENTS_MD}" ]]; then
+        cat "${AGENTS_MD}"
+    fi
+}
+
 append_log() {
     local log_file="$1"
     local role="$2"   # "Claude" or "Codex"
@@ -115,6 +126,7 @@ build_prompt() {
 cmd_start() {
     local session_id="$1"
     local context_file="$2"
+    local inject_agents="${3:-true}"
 
     validate_session_id "${session_id}"
 
@@ -148,9 +160,18 @@ cmd_start() {
         echo "---"
     } > "${log_file}"
 
-    # 初回プロンプト生成
+    # 初回プロンプト生成（AGENTS.md を先頭に注入）
+    local agents_content=""
+    if [[ "${inject_agents}" == "true" ]]; then
+        agents_content="$(load_agents_md)"
+    fi
+
     local prompt
-    prompt="$(cat "${context_file}")"$'\n\n'"上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
+    if [[ -n "${agents_content}" ]]; then
+        prompt="${agents_content}"$'\n\n'"---"$'\n\n'"$(cat "${context_file}")"$'\n\n'"上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
+    else
+        prompt="$(cat "${context_file}")"$'\n\n'"上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
+    fi
 
     echo "--- Codex 初回応答 (session: ${session_id}) ---"
     local response
@@ -215,6 +236,17 @@ if [[ $# -lt 1 ]]; then
     usage
 fi
 
+# --no-inject フラグの解析
+INJECT_AGENTS="true"
+if [[ "$1" == "--no-inject" ]]; then
+    INJECT_AGENTS="false"
+    shift
+fi
+
+if [[ $# -lt 1 ]]; then
+    usage
+fi
+
 SUBCOMMAND="$1"
 shift
 
@@ -226,7 +258,7 @@ case "${SUBCOMMAND}" in
             echo "Error: 'start' には session_id と context_file が必要です。" >&2
             usage
         fi
-        cmd_start "$1" "$2"
+        cmd_start "$1" "$2" "${INJECT_AGENTS}"
         ;;
     reply)
         if [[ $# -lt 2 ]]; then
