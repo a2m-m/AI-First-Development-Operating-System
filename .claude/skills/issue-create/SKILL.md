@@ -87,6 +87,8 @@ SESSION_ID="issue-lint-$(date +%s)"
 ./os_scripts/codex_session.sh start "${SESSION_ID}" "${CONTEXT_FILE}"
 ```
 
+> **注意**: `start` コマンドが成功した後にエラーが発生した場合は、必ず「エラー時クリーンアップ手順」を実行してから停止すること。
+
 Codex の応答を読み、質問があれば回答する（最大 5 往復）：
 
 | 質問の種類 | 対応方法 |
@@ -143,10 +145,21 @@ gh issue comment <Issue番号> --body "<整形した評価レポート>"
 rm "${CONTEXT_FILE}"
 ```
 
+## エラー時クリーンアップ手順
+
+`./os_scripts/codex_session.sh start` が成功した後にエラーが発生した場合は、以下を必ず実行してから停止すること：
+
+```bash
+./os_scripts/codex_session.sh end "${SESSION_ID}"
+rm "${CONTEXT_FILE}"
+```
+
+その後、エラー内容をユーザーに報告する。
+
 ## ルール
 
 - `--review` フラグがない場合は Codex レビューを実行しない（従来の動作を維持）
 - `codex_session.sh` が存在しない場合は Codex レビューをスキップする（エラーにしない）
 - 評価レポートは **必ず日本語** で出力する
-- セッション終了（`end`）は途中エラーが発生しても **必ず実行する**
+- セッション終了（`end`）は途中エラーが発生しても **必ず実行する**（エラー時クリーンアップ手順を参照）
 - 一時コンテキストファイルはセッション終了後に削除する
