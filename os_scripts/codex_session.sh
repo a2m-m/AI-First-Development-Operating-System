@@ -63,11 +63,15 @@ validate_session_id() {
 run_codex() {
     local prompt="$1"
     local response
-    if ! response="$(echo "${prompt}" | codex exec - 2>&1)"; then
+    local stderr_file
+    stderr_file="$(mktemp)"
+    if ! response="$(echo "${prompt}" | codex exec - 2>"${stderr_file}")"; then
         echo "Error: Codex の実行に失敗しました。" >&2
-        echo "  詳細: ${response}" >&2
+        cat "${stderr_file}" >&2
+        rm -f "${stderr_file}"
         exit 1
     fi
+    rm -f "${stderr_file}"
     echo "${response}"
 }
 
