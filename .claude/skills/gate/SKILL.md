@@ -1,7 +1,6 @@
 ---
 name: gate
 description: Pre-Push Gate を実行する。lint / typecheck / test を走らせ、結果を解釈して次の手を提示する。
-disable-model-invocation: true
 allowed-tools: Bash(./os_scripts/run *), Read
 ---
 
