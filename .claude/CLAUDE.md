@@ -240,7 +240,7 @@ main        ← 公開物のみ（GitHub に push する）
 | `/plan` | Issue AC 確認 → コード探索 → 実装計画立案 | — | Claude（自動） |
 | `/issue-create` | テンプレ準拠の命令書 Issue を作成 | `feature <タイトル>` | ユーザー |
 | `/issue-lint` | Issue の品質チェック（AC・Commit Plan・空セクション） | `[Issue番号]` | ユーザー |
-| `/review` | Issue AC に基づく PR / 成果物レビュー | `[Issue番号 または PR番号]` | ユーザー / Claude（自己レビュー） |
+| `/review` | Codex 主導で PR / Issue をレビュー。コンテキストを整形して Codex セッションを起動し、双方向質疑を経て Severity 区分で結果を投稿する | `[PR番号 または Issue番号]` | ユーザー / Claude（自己レビュー） |
 | `/gate` | Pre-Push Gate 実行 + 結果解釈 | — | ユーザー / Claude（自動） |
 | `/commit-lint` | コミットメッセージ規約チェック | — | ユーザー |
 | `/pr-complete` | PR マージ後に `.ai-context.md` を更新 | `<PR番号>` | ユーザー |
