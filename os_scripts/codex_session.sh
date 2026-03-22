@@ -63,7 +63,7 @@ validate_session_id() {
 run_codex() {
     local prompt="$1"
     local response
-    if ! response="$(echo "${prompt}" | codex -q 2>&1)"; then
+    if ! response="$(echo "${prompt}" | codex exec - 2>&1)"; then
         echo "Error: Codex の実行に失敗しました。" >&2
         echo "  詳細: ${response}" >&2
         exit 1
