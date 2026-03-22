@@ -237,7 +237,7 @@ main        ← 公開物のみ（GitHub に push する）
 
 | コマンド | 用途 | 引数例 | 起動者 |
 |---|---|---|---|
-| `/plan` | Issue AC 確認 → コード探索 → 実装計画立案 | — | Claude（自動） |
+| `/plan` | Issue AC 確認 → コード探索 → 実装計画立案 | — | ユーザー / Claude（自動） |
 | `/issue-create` | テンプレ準拠の命令書 Issue を作成。`--review` フラグで作成後に Codex 品質レビューを自動実行 | `feature <タイトル> [--review]` | ユーザー |
 | `/issue-lint` | Issue の品質チェック（AC・Commit Plan・空セクション）＋ Codex による品質評価レポートを Issue コメントに投稿 | `[Issue番号]` | ユーザー |
 | `/research` | Explore が調査スコープを定義し、Codex が主導して深掘りリサーチを行う。双方向質疑を経て最終リサーチレポートを出力する | `<テーマ>` | ユーザー |

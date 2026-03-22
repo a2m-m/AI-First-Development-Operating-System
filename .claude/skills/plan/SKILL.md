@@ -1,7 +1,6 @@
 ---
 name: plan
 description: Issue の AC を確認し、コードを探索して実装計画を立案する。実装開始前の必須ステップ。
-disable-model-invocation: true
 argument-hint: [Issue番号]
 allowed-tools: Read, Grep, Glob, Bash(gh issue view *), Bash(gh pr list *)
 ---
