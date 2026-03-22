@@ -19,19 +19,26 @@ allowed-tools: Read, Grep, Glob, Bash(gh issue list *), Edit
    - Known pitfalls
    - CI Notes
 
-2. `gh issue list --state open` で現在のオープン Issue を確認する
+2. `.ai-context.local.md` が存在する場合は追加で読む（OS 開発リポジトリ専用の状態ファイル）。
+   存在しない場合はスキップする。
 
-3. 把握した情報を作業の文脈として保持し、実装の判断に活用する
+3. `gh issue list --state open` で現在のオープン Issue を確認する
+
+4. 把握した情報を作業の文脈として保持し、実装の判断に活用する
 
 ## 作業終了時
 
-以下の情報で `.ai-context.md` を更新する：
+以下の情報でコンテキストファイルを更新する：
 
 - 今回の作業で変更した内容
 - 新たに発生した Decision
 - 次にやるべきこと（Next actions）— **scope ごとにセクション分けして書く（下記フォーマット参照）**
 - 踏んだ罠や注意点（Known pitfalls）
 - CI の状態変化
+
+**更新先の判断**：
+- `.ai-context.local.md` が存在する場合 → **`.ai-context.local.md` を更新する**（`.ai-context.md` は雛形のまま維持する）
+- `.ai-context.local.md` が存在しない場合 → **`.ai-context.md` を更新する**
 
 ## Next actions フォーマット
 
@@ -58,4 +65,5 @@ allowed-tools: Read, Grep, Glob, Bash(gh issue list *), Edit
 ## ルール
 
 - `.ai-context.md` が存在しない場合は、固定フォーマット（02_OS_Template_Spec §6.3）で新規作成する
+- `.ai-context.local.md` が存在する場合は読取・更新ともにそちらを優先し、`.ai-context.md` は雛形のまま触らない
 - 情報が不明な場合は `TODO` と明記し、推測で埋めない

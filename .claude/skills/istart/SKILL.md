@@ -13,7 +13,12 @@ allowed-tools: Read, Bash(gh issue list *), Bash(gh issue view *), Bash(git chec
 
 ### 1. コンテキスト把握
 
-`.ai-context.md` を読んで以下を確認する：
+コンテキストファイルを読んで以下を確認する：
+
+- `.ai-context.local.md` が存在する場合 → **`.ai-context.local.md` を読む**（OS 開発リポジトリ固有の状態が入っている）
+- 存在しない場合 → **`.ai-context.md` を読む**
+
+確認内容：
 - 現在の Status（works / broken）
 - Active Issues（すでに進行中のものがないか）
 - Completed（完了済みの Issue 番号）
@@ -27,7 +32,7 @@ gh issue list --state open --limit 50 --json number,title,labels,milestone,assig
 
 取得したリストから **着手すべき Issue** を以下の優先順位で選ぶ：
 
-1. `.ai-context.md` の `Next actions` に明示されているもの
+1. コンテキストファイル（`.ai-context.local.md` または `.ai-context.md`）の `Next actions` に明示されているもの
 2. 直前の Active Issue と同じ `scope/xxx` ラベルを持つもの（同機能グループを優先してまとめて潰す）
 3. 依存 Issue がすべて完了しているもの（本文の "依存" / "Depends on" を確認）
 4. Issue 番号が若いもの（小さい数字 = 古い Issue = 先行依存を満たしている可能性が高い）
