@@ -126,7 +126,6 @@ build_prompt() {
 cmd_start() {
     local session_id="$1"
     local context_file="$2"
-    local inject_agents="${3:-true}"
 
     validate_session_id "${session_id}"
 
@@ -145,6 +144,10 @@ cmd_start() {
 
     mkdir -p "${SESSIONS_DIR}"
 
+    # コンテキストを変数にキャッシュ（ファイルの重複読み込みを防ぐ）
+    local context_content
+    context_content="$(cat "${context_file}")"
+
     # ログ初期化
     {
         echo "# Codex セッション: ${session_id}"
@@ -155,22 +158,23 @@ cmd_start() {
         echo ""
         echo "## コンテキスト"
         echo ""
-        cat "${context_file}"
+        echo "${context_content}"
         echo ""
         echo "---"
     } > "${log_file}"
 
     # 初回プロンプト生成（AGENTS.md を先頭に注入）
     local agents_content=""
-    if [[ "${inject_agents}" == "true" ]]; then
+    if [[ "${INJECT_AGENTS}" == "true" ]]; then
         agents_content="$(load_agents_md)"
     fi
 
+    local prompt_suffix="上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
     local prompt
     if [[ -n "${agents_content}" ]]; then
-        prompt="${agents_content}"$'\n\n'"---"$'\n\n'"$(cat "${context_file}")"$'\n\n'"上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
+        prompt="${agents_content}"$'\n\n'"---"$'\n\n'"${context_content}"$'\n\n'"${prompt_suffix}"
     else
-        prompt="$(cat "${context_file}")"$'\n\n'"上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
+        prompt="${context_content}"$'\n\n'"${prompt_suffix}"
     fi
 
     echo "--- Codex 初回応答 (session: ${session_id}) ---"
@@ -258,7 +262,7 @@ case "${SUBCOMMAND}" in
             echo "Error: 'start' には session_id と context_file が必要です。" >&2
             usage
         fi
-        cmd_start "$1" "$2" "${INJECT_AGENTS}"
+        cmd_start "$1" "$2"
         ;;
     reply)
         if [[ $# -lt 2 ]]; then
