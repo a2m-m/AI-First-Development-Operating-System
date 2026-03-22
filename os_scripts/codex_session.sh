@@ -21,6 +21,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SESSIONS_DIR="${SCRIPT_DIR}/codex_sessions"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+AGENTS_MD="${REPO_ROOT}/AGENTS.md"
 
 # ---------------------------------------------------------------------------
 # ヘルパー
@@ -28,9 +30,12 @@ SESSIONS_DIR="${SCRIPT_DIR}/codex_sessions"
 
 usage() {
     echo "Usage:"
-    echo "  $(basename "$0") start <session_id> <context_file>"
+    echo "  $(basename "$0") [--no-inject] start <session_id> <context_file>"
     echo "  $(basename "$0") reply <session_id> \"<message>\""
     echo "  $(basename "$0") end   <session_id>"
+    echo ""
+    echo "Options:"
+    echo "  --no-inject  AGENTS.md を system prompt に注入しない（CLI 自動参照時の二重注入防止）"
     exit 1
 }
 
@@ -79,6 +84,12 @@ require_session() {
         exit 1
     fi
     echo "${log_file}"
+}
+
+load_agents_md() {
+    if [[ -f "${AGENTS_MD}" ]]; then
+        cat "${AGENTS_MD}"
+    fi
 }
 
 append_log() {
@@ -133,6 +144,10 @@ cmd_start() {
 
     mkdir -p "${SESSIONS_DIR}"
 
+    # コンテキストを変数にキャッシュ（ファイルの重複読み込みを防ぐ）
+    local context_content
+    context_content="$(cat "${context_file}")"
+
     # ログ初期化
     {
         echo "# Codex セッション: ${session_id}"
@@ -143,14 +158,24 @@ cmd_start() {
         echo ""
         echo "## コンテキスト"
         echo ""
-        cat "${context_file}"
+        echo "${context_content}"
         echo ""
         echo "---"
     } > "${log_file}"
 
-    # 初回プロンプト生成
+    # 初回プロンプト生成（AGENTS.md を先頭に注入）
+    local agents_content=""
+    if [[ "${INJECT_AGENTS}" == "true" ]]; then
+        agents_content="$(load_agents_md)"
+    fi
+
+    local prompt_suffix="上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
     local prompt
-    prompt="$(cat "${context_file}")"$'\n\n'"上記のコンテキストを読んで、Codex としてレビュー・質問・調査の観点を示してください。"
+    if [[ -n "${agents_content}" ]]; then
+        prompt="${agents_content}"$'\n\n'"---"$'\n\n'"${context_content}"$'\n\n'"${prompt_suffix}"
+    else
+        prompt="${context_content}"$'\n\n'"${prompt_suffix}"
+    fi
 
     echo "--- Codex 初回応答 (session: ${session_id}) ---"
     local response
@@ -210,6 +235,17 @@ cmd_end() {
 # ---------------------------------------------------------------------------
 # エントリーポイント
 # ---------------------------------------------------------------------------
+
+if [[ $# -lt 1 ]]; then
+    usage
+fi
+
+# --no-inject フラグの解析
+INJECT_AGENTS="true"
+if [[ "$1" == "--no-inject" ]]; then
+    INJECT_AGENTS="false"
+    shift
+fi
 
 if [[ $# -lt 1 ]]; then
     usage
