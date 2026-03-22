@@ -2,7 +2,7 @@
 name: context-sync
 description: 作業開始時に .ai-context.md と active Issues を読んで現在の状態を把握する。作業終了時にコンテキストを更新する。
 user-invocable: false
-allowed-tools: Read, Grep, Glob, Bash(gh issue list *)
+allowed-tools: Read, Grep, Glob, Bash(gh issue list *), Edit
 ---
 
 # コンテキスト同期
