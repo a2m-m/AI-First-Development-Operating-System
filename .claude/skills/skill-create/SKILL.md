@@ -64,9 +64,9 @@ argument-hint: <引数ヒント（あれば）>
 | `description` | Claude の自動判断ヒント |
 | `disable-model-invocation: true` | ユーザーのみ起動（副作用ある操作） |
 | `user-invocable: false` | Claude のみ起動（背景知識系） |
-| `allowed-tools` | ツール制限（最小権限） |
-| `context: fork` | サブエージェントとして隔離実行 |
-| `agent: Explore / Plan` | エージェントモード指定 |
+| `allowed-tools` | ツール制限（最小権限）。代表的な記述例は下の 2 行を参照 |
+| `allowed-tools: Agent(subagent_type=Explore)` | Explore サブエージェントを利用（並列調査・大量ファイル探索）。実例: research |
+| `allowed-tools: EnterPlanMode` | プランモードを許可。実例: istart |
 | `argument-hint` | 引数のヒント表示 |
 
 ## 引数記法
