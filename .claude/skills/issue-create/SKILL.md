@@ -83,7 +83,7 @@ echo "${ISSUE_CONTENT}" >> "${CONTEXT_FILE}"
 ### セッション開始・質疑・終了
 
 ```bash
-SESSION_ID="issue-lint-$(date +%s)"
+SESSION_ID="issue-create-$(date +%s)"
 ./os_scripts/codex_session.sh start "${SESSION_ID}" "${CONTEXT_FILE}"
 ```
 
