@@ -64,6 +64,7 @@ CONTEXT_FILE=$(mktemp /tmp/research_context_XXXXXX.md)
 書き込む内容：
 
 ```
+あなたはリサーチャーです。
 # リサーチ依頼: <テーマ>
 
 ## Explore エージェントによる事前調査
